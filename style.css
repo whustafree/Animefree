@@ -145,3 +145,60 @@ body {
     display: flex;
     align-items: center;
 }
+/* ... MANTÉN TU CSS BASE ... */
+
+/* Estilos de la PÁGINA DE BÚSQUEDA */
+.search-page-header {
+    padding: 20px;
+    background: #1a1a1a;
+    display: flex;
+    gap: 10px;
+    position: sticky;
+    top: 60px; /* Debajo del header principal */
+    z-index: 50;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.search-input {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #0f0f0f;
+    color: white;
+    font-size: 1rem;
+}
+
+.search-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Cabecera del Historial */
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-right: 20px;
+}
+
+.clear-history {
+    background: #333;
+    color: #aaa;
+    border: 1px solid #444;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Ajuste del Nav Inferior para iconos */
+.nav-btn .icon {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+    display: block;
+}
