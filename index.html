@@ -13,35 +13,33 @@
 
     <header class="app-header">
         <div class="logo">WHUSTAF<span>TV</span></div>
-        <div class="header-controls">
-            <button id="btn-install" class="install-btn focusable" style="display:none;">⬇ Instalar App</button>
-            <div class="search-icon focusable" tabindex="0" onclick="toggleSearch()">🔍</div>
-        </div>
+        <button id="btn-install" class="install-btn focusable" style="display:none;">⬇ Instalar</button>
     </header>
-
-    <div id="searchContainer" class="search-overlay">
-        <input type="text" id="inp" class="focusable" placeholder="Buscar anime..." onkeyup="if(event.key === 'Enter') buscar()">
-        <button class="focusable" onclick="buscar()">Buscar</button>
-        <button class="close-search focusable" onclick="toggleSearch()">✕</button>
-    </div>
 
     <main>
         <div id="view-home" class="view active">
-            <h2 class="section-title">🔥 Estrenos</h2>
+            <h2 class="section-title">🔥 Estrenos de Hoy</h2>
             <div id="grid-latest" class="grid-container">
                 <div class="loader">Cargando...</div>
             </div>
         </div>
 
-        <div id="view-history" class="view">
-            <h2 class="section-title">🕒 Continuar Viendo</h2>
-            <div id="grid-history" class="grid-container"></div>
-            <button class="clear-history focusable" onclick="borrarHistorial()">Borrar Historial</button>
+        <div id="view-search" class="view">
+            <div class="search-page-header">
+                <input type="text" id="inp" class="search-input focusable" placeholder="Escribe el nombre del anime..." onkeyup="if(event.key === 'Enter') buscar()">
+                <button class="search-btn focusable" onclick="buscar()">Buscar</button>
+            </div>
+            <div id="grid-search" class="grid-container">
+                <div class="empty-msg">Busca tus animes favoritos.</div>
+            </div>
         </div>
 
-        <div id="view-search" class="view">
-            <h2 class="section-title">Resultados</h2>
-            <div id="grid-search" class="grid-container"></div>
+        <div id="view-history" class="view">
+            <div class="history-header">
+                <h2 class="section-title">🕒 Tu Historial</h2>
+                <button class="clear-history focusable" onclick="borrarHistorial()">🗑️ Borrar</button>
+            </div>
+            <div id="grid-history" class="grid-container"></div>
         </div>
     </main>
 
@@ -54,9 +52,7 @@
                     <h1 id="det-title">Título</h1>
                     <div class="badges" id="det-genres"></div>
                     <p id="det-synopsis">Sinopsis...</p>
-                    <div class="action-buttons">
-                        <button id="btn-play-latest" class="primary-btn focusable">▶ Reproducir</button>
-                    </div>
+                    <button id="btn-play-latest" class="primary-btn focusable">▶ Ver Último</button>
                 </div>
             </div>
             <div id="det-episodes" class="episodes-grid"></div>
@@ -70,7 +66,7 @@
                 <h3 id="player-title"></h3>
                 <div class="server-list" id="server-list"></div>
                 <div class="player-actions">
-                    <button class="control-btn focusable" onclick="abrirDetallesDesdePlayer()">📺 Ver capítulos</button>
+                    <button class="control-btn focusable" onclick="abrirDetallesDesdePlayer()">📺 Ver Capítulos</button>
                     <button class="control-btn focusable" onclick="cerrarReproductor()">✕ Cerrar</button>
                 </div>
             </div>
@@ -78,14 +74,18 @@
     </div>
 
     <nav class="bottom-nav">
-        <button onclick="cambiarVista('home')" class="nav-btn focusable active" id="btn-home" tabindex="0">🏠 Inicio</button>
-        <button onclick="cambiarVista('history')" class="nav-btn focusable" id="btn-history" tabindex="0">🕒 Historial</button>
-        <button onclick="recargar()" class="nav-btn focusable" tabindex="0">🔄 Refrescar</button>
+        <button onclick="cambiarVista('home')" class="nav-btn focusable active" id="btn-home">
+            <span class="icon">🏠</span> Inicio
+        </button>
+        <button onclick="cambiarVista('search')" class="nav-btn focusable" id="btn-search">
+            <span class="icon">🔍</span> Buscar
+        </button>
+        <button onclick="cambiarVista('history')" class="nav-btn focusable" id="btn-history">
+            <span class="icon">🕒</span> Historial
+        </button>
     </nav>
 
     <script src="app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-    </script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
 </body>
 </html>
