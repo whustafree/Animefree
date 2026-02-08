@@ -12,6 +12,18 @@ const GENRE_MAP = {
     "Acción": "accion", "Artes Marciales": "artes-marciales", "Aventuras": "aventura", "Carreras": "carreras", "Ciencia Ficción": "ciencia-ficcion", "Comedia": "comedia", "Demencia": "demencia", "Demonios": "demonios", "Deportes": "deportes", "Drama": "drama", "Ecchi": "ecchi", "Escolares": "escolares", "Espacial": "espacial", "Fantasía": "fantasia", "Harem": "harem", "Histórico": "historico", "Infantil": "infantil", "Josei": "josei", "Juegos": "juegos", "Magia": "magia", "Mecha": "mecha", "Militar": "militar", "Misterio": "misterio", "Música": "musica", "Parodia": "parodia", "Policía": "policia", "Psicológico": "psicologico", "Recuentos de la vida": "recuentos-de-la-vida", "Romance": "romance", "Samurai": "samurai", "Seinen": "seinen", "Shoujo": "shoujo", "Shounen": "shounen", "Sobrenatural": "sobrenatural", "Superpoderes": "superpoderes", "Suspenso": "suspenso", "Terror (Gore)": "terror", "Vampiros": "vampiros", "Yaoi": "yaoi", "Yuri": "yuri"
 };
 
+// --- UTILIDAD TV: ENFOCAR PRIMER ELEMENTO ---
+function enfocarPrimerElemento(contenedorId) {
+    // Pequeño retraso para asegurar que el DOM se pintó
+    setTimeout(() => {
+        const container = document.getElementById(contenedorId);
+        if (container) {
+            const primer = container.querySelector('.focusable');
+            if (primer) primer.focus();
+        }
+    }, 100);
+}
+
 // --- INSTALACIÓN ---
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const btn = document.getElementById('btn-install'); if(btn) { btn.style.display = 'inline-block'; btn.onclick = () => { btn.style.display = 'none'; deferredPrompt.prompt(); }; } });
 
@@ -23,14 +35,19 @@ window.addEventListener('popstate', (event) => {
 
     if (hash === '#player') {
         player.style.display = 'flex';
+        enfocarPrimerElemento('player-controls'); // Enfocar controles al volver
     } else if (hash === '#details') {
         player.style.display = 'none'; 
         document.getElementById('video-wrapper').innerHTML = ''; 
-        details.style.display = 'block'; 
+        details.style.display = 'block';
+        // Al volver a detalles, enfocar el botón de Play
+        setTimeout(() => document.getElementById('btn-play-latest').focus(), 100);
     } else {
         player.style.display = 'none';
         document.getElementById('video-wrapper').innerHTML = '';
         details.style.display = 'none';
+        // Al volver al inicio, enfocar la grid activa
+        if(document.getElementById('tab-home').classList.contains('active')) enfocarPrimerElemento('grid-latest');
     }
 });
 
@@ -47,8 +64,11 @@ function cambiarTab(tabId) {
     document.getElementById(`tab-${tabId}`).classList.add('active');
     document.getElementById(`nav-${tabId}`).classList.add('active');
     window.scrollTo(0, 0);
-    if(tabId === 'history') renderHistorial();
-    if(tabId === 'favorites') renderFavorites();
+    
+    if(tabId === 'history') { renderHistorial(); enfocarPrimerElemento('grid-history'); }
+    else if(tabId === 'favorites') { renderFavorites(); enfocarPrimerElemento('grid-favorites'); }
+    else if(tabId === 'home') { enfocarPrimerElemento('grid-latest'); }
+    else if(tabId === 'search') { document.getElementById('inp').focus(); }
 }
 
 // --- FETCH ---
@@ -87,6 +107,8 @@ async function cargarEstrenos() {
     if (data) {
         grid.innerHTML = '';
         data.forEach(item => crearTarjeta(item, grid, 'latest'));
+        // TV: Enfocar el primer estreno al cargar
+        enfocarPrimerElemento('grid-latest');
     }
 }
 
@@ -108,6 +130,8 @@ async function cargarMasResultados(limpiar = false) {
     if (data && data.media && data.media.length > 0) {
         data.media.forEach(anime => crearTarjeta(anime, grid, 'search'));
         searchPage++; hasMoreResults = data.hasNextPage || false;
+        // TV: Si es búsqueda nueva, enfocar primer resultado
+        if(limpiar) enfocarPrimerElemento('grid-search');
     } else { hasMoreResults = false; if (limpiar) grid.innerHTML = '<div class="placeholder-msg"><p>Sin resultados</p></div>'; }
     isLoadingMore = false;
 }
@@ -140,6 +164,10 @@ function crearTarjeta(item, container, context) {
             cargarDetallesAnime(realSlug).then(()=>prepararReproductor(item.slug, item.title, item.lastEp, img)); 
         }
     };
+    // Soporte para tecla ENTER en TV
+    card.onkeydown = (e) => {
+        if (e.key === 'Enter') card.click();
+    };
     container.appendChild(card);
 }
 
@@ -159,8 +187,7 @@ async function cargarDetallesAnime(slug) {
     const info = await fetchData(`/anime/${slug}`);
     
     if(info) {
-        // --- FIX ORDEN: ASCENDENTE (1, 2, 3...) ---
-        // 'a - b' ordena de menor a mayor
+        // ORDEN ASCENDENTE (1, 2, 3...)
         if (info.episodes) {
             info.episodes.sort((a,b) => parseFloat(a.number) - parseFloat(b.number));
         }
@@ -180,7 +207,6 @@ async function cargarDetallesAnime(slug) {
 
         if(info.episodes.length > 0) {
             document.getElementById('btn-play-latest').onclick = () => {
-                // COMO ESTÁ ORDENADO ASCENDENTE, EL ÚLTIMO ES EL FINAL DEL ARRAY
                 const lastIndex = info.episodes.length - 1;
                 currentEpisodeIndex = lastIndex; 
                 const lastEp = info.episodes[lastIndex];
@@ -190,14 +216,19 @@ async function cargarDetallesAnime(slug) {
             info.episodes.forEach((ep, index) => {
                 const b = document.createElement('div');
                 b.className = 'ep-card focusable';
+                b.setAttribute('tabindex', '0'); // Importante para TV
                 if(watchedList.includes(ep.slug)) b.classList.add('watched');
                 b.innerText = `Ep ${ep.number}`;
                 b.onclick = () => {
                     currentEpisodeIndex = index; 
                     prepararReproductor(ep.slug, info.title, ep.number, info.cover);
                 };
+                b.onkeydown = (e) => { if (e.key === 'Enter') b.click(); };
                 grid.appendChild(b);
             });
+            
+            // TV: Enfocar el botón de "Continuar Viendo"
+            setTimeout(() => document.getElementById('btn-play-latest').focus(), 100);
         }
     }
 }
@@ -215,15 +246,13 @@ async function prepararReproductor(slug, title, number, cover) {
     if(currentAnimeData) guardarHistorial({animeSlug: currentAnimeData.slug, slug:slug, title:title, lastEp:number, cover:cover});
     marcarComoVisto(slug);
 
-    // LOGICA SIGUIENTE ADAPTADA AL ORDEN ASCENDENTE (1->2->3)
     const btnNext = document.getElementById('btn-next-ep');
     
-    // Si NO estamos en el último índice, hay uno siguiente (mayor índice)
-    // Ej: Array[0]=Ep1, Array[1]=Ep2. Estoy en 0. Next es 1.
+    // Lógica Siguiente (Orden Ascendente)
     if (currentAnimeData && currentEpisodeIndex < currentAnimeData.episodes.length - 1) {
         btnNext.style.display = 'block';
         btnNext.onclick = () => {
-            const nextEp = currentAnimeData.episodes[currentEpisodeIndex + 1]; // SUMAMOS para ir al siguiente
+            const nextEp = currentAnimeData.episodes[currentEpisodeIndex + 1];
             currentEpisodeIndex++; 
             history.replaceState({ page: 'player' }, "", `#player`); 
             prepararReproductor(nextEp.slug, currentAnimeData.title, nextEp.number, currentAnimeData.cover);
@@ -245,15 +274,20 @@ async function prepararReproductor(slug, title, number, cover) {
         data.servers.forEach((s, i) => {
             const btn = document.createElement('button');
             btn.className = 'focusable';
+            btn.setAttribute('tabindex', '0');
             btn.innerText = s.name;
             btn.onclick = () => {
                 document.querySelectorAll('.server-list button').forEach(b=>b.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('video-wrapper').innerHTML = `<iframe src="${s.embed || s.code || s.url}" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" style="width:100%; height:100%;"></iframe>`;
             };
+            btn.onkeydown = (e) => { if (e.key === 'Enter') btn.click(); };
             document.getElementById('server-list').appendChild(btn);
             if(i===0) btn.click();
         });
+        
+        // TV: Enfocar el botón del primer servidor
+        enfocarPrimerElemento('server-list');
     } else { document.getElementById('server-list').innerHTML = 'Error servidores'; }
 }
 
@@ -299,7 +333,7 @@ function renderHistorial() {
     const h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     grid.innerHTML = '';
     if(h.length===0) grid.innerHTML = '<div class="placeholder-msg"><p>Sin historial</p></div>';
-    h.reverse().forEach(i => crearTarjeta(i, g, 'history'));
+    h.reverse().forEach(i => crearTarjeta(i, grid, 'history'));
 }
 function guardarHistorial(i) {
     let h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
