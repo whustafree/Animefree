@@ -3,138 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Whustaf Anime Fix</title>
-    <style>
-        :root { --main: #ff4500; --bg: #0f0f0f; --card: #1a1a1a; }
-        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; padding: 10px; padding-bottom: 120px; }
-        .search-box { display: flex; gap: 5px; margin: 15px 0; }
-        input { flex: 1; padding: 12px; background: #222; border: 1px solid #333; color: #fff; border-radius: 5px; }
-        button { background: var(--main); border: none; padding: 10px; color: white; border-radius: 5px; }
-        .anime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-        .anime-card { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid #333; }
-        .anime-card img { width: 100%; height: 180px; object-fit: cover; }
-        .anime-card div { padding: 8px; font-size: 0.8rem; text-align: center; height: 35px; overflow: hidden; }
-        #debug-console { position: fixed; bottom: 0; left: 0; width: 100%; height: 100px; background: #000; color: #0f0; font-size: 10px; overflow-y: auto; border-top: 1px solid var(--main); z-index: 1000; padding: 5px; }
-        #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
-        .close { position: absolute; top: 20px; right: 20px; font-size: 30px; color: var(--main); }
-        .ep-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; padding: 20px; max-height: 50vh; overflow-y: auto; }
-        .ep-btn { background: #333; padding: 10px; border-radius: 4px; min-width: 40px; text-align: center; }
-    </style>
+    <title>Animofree PWA</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff4500">
+    <link rel="apple-touch-icon" href="icon.png">
 </head>
 <body>
+    <header>
+        <h1>Whustaf Anime</h1>
+        <div class="search-box">
+            <input type="text" id="inp" placeholder="Buscar anime...">
+            <button onclick="buscar()">🔍</button>
+        </div>
+    </header>
 
-    <h2 style="color:var(--main); text-align:center;">Anime Semanal</h2>
-    
-    <div class="search-box">
-        <input type="text" id="inp" placeholder="Buscar anime...">
-        <button onclick="buscar()">🔍</button>
-    </div>
-
-    <div id="grid" class="anime-grid"></div>
+    <main id="grid" class="anime-grid">
+        <div class="loader">Iniciando sistema...</div>
+    </main>
 
     <div id="modal">
-        <span class="close" onclick="this.parentElement.style.display='none'">&times;</span>
+        <span class="close" onclick="cerrarModal()">&times;</span>
         <h3 id="mTitle"></h3>
         <div id="mEps" class="ep-list"></div>
-        <div id="mLinks" style="padding: 20px; display: flex; flex-direction: column; gap: 10px; width: 80%;"></div>
+        <div id="mLinks"></div>
     </div>
 
     <div id="debug-console"></div>
 
-<script>
-    const consoleDiv = document.getElementById('debug-console');
-    function log(m, isErr=false) {
-        const d = document.createElement('div');
-        if(isErr) d.style.color = '#ff5555';
-        d.innerText = `> ${m}`;
-        consoleDiv.appendChild(d);
-        consoleDiv.scrollTop = consoleDiv.scrollHeight;
-    }
-
-    // --- EL GRAN CAMBIO: USAR UN PROXY PARA EVITAR EL "FAILED TO FETCH" ---
-    async function call(path) {
-        const targetUrl = `https://api.consumet.org/anime/animeflv/${path}`;
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-        
-        log(`Pidiendo: ${path}...`);
-        try {
-            const r = await fetch(proxyUrl);
-            const data = await r.json();
-            // AllOrigins devuelve un objeto con la propiedad 'contents' que es un string JSON
-            const parsedData = JSON.parse(data.contents);
-            log(`Éxito en: ${path}`);
-            return parsedData;
-        } catch(e) {
-            log(`Fallo: ${e.message}`, true);
-            return null;
+    <script src="app.js"></script>
+    <script>
+        // Registro del Service Worker para la PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log("Service Worker Registrado"));
         }
-    }
-
-    async function init() {
-        log("Cargando estrenos con Proxy...");
-        const data = await call("recent-episodes");
-        if(data) render(data.results);
-    }
-
-    async function buscar() {
-        const q = document.getElementById('inp').value;
-        if(!q) return;
-        const data = await call(q);
-        if(data) render(data.results);
-    }
-
-    function render(list) {
-        const g = document.getElementById('grid');
-        g.innerHTML = '';
-        list.forEach(a => {
-            const c = document.createElement('div');
-            c.className = 'anime-card';
-            c.innerHTML = `<img src="${a.image}"><div>${a.title}</div>`;
-            c.onclick = () => loadAnime(a.id, a.title);
-            g.appendChild(c);
-        });
-    }
-
-    async function loadAnime(id, title) {
-        document.getElementById('modal').style.display = 'flex';
-        document.getElementById('mTitle').innerText = title;
-        document.getElementById('mEps').innerHTML = 'Cargando eps...';
-        document.getElementById('mLinks').innerHTML = '';
-        
-        const data = await call(`info?id=${id}`);
-        if(data) {
-            document.getElementById('mEps').innerHTML = '';
-            data.episodes.forEach(e => {
-                const b = document.createElement('div');
-                b.className = 'ep-btn';
-                b.innerText = e.number;
-                b.onclick = () => loadLinks(e.id);
-                document.getElementById('mEps').appendChild(b);
-            });
-        }
-    }
-
-    async function loadLinks(id) {
-        log(`Cargando video de ${id}...`);
-        const data = await call(`watch?episodeId=${id}`);
-        const cont = document.getElementById('mLinks');
-        cont.innerHTML = '';
-        if(data && data.sources) {
-            data.sources.forEach(s => {
-                const b = document.createElement('button');
-                b.innerText = `Calidad: ${s.quality}`;
-                b.style.padding = "12px";
-                b.style.background = "#444";
-                b.style.color = "white";
-                b.style.border = "none";
-                b.style.borderRadius = "5px";
-                b.onclick = () => window.open(s.url, '_blank');
-                cont.appendChild(b);
-            });
-        }
-    }
-
-    window.onload = init;
-</script>
+    </script>
 </body>
 </html>
