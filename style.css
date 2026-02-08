@@ -87,29 +87,8 @@ body { background-color: var(--bg); color: var(--text); font-family: -apple-syst
 .nav-btn.active { color: white; }
 .install-btn { background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 5px 10px; border-radius: 20px; font-weight: bold; cursor: pointer; }
 .focusable:focus { outline: 4px solid white; z-index: 20; transform: scale(1.05); }
-/* --- MODO TV & TECLADO --- */
 
-/* Cuando un elemento tiene el foco, lo hacemos GIGANTE */
-.focusable:focus {
-    outline: 5px solid var(--primary); /* Borde grueso rojo */
-    outline-offset: 4px;
-    transform: scale(1.1); /* Hacemos el elemento más grande */
-    z-index: 100;
-    box-shadow: 0 0 20px rgba(229, 9, 20, 0.8); /* Resplandor */
-    background-color: #333; /* Fondo para resaltar texto */
-}
-
-/* Ajuste específico para las tarjetas en TV */
-.anime-card:focus .info {
-    background: var(--primary);
-    color: white;
-}
-
-.anime-card:focus .title {
-    white-space: normal; /* Permitir que el título se vea completo si es largo */
-    overflow: visible;
-}
-/* MODO TV: Borde de selección */
+/* --- MODO TV: Borde de selección (OBLIGATORIO) --- */
 .focusable:focus {
     outline: 5px solid var(--primary);
     outline-offset: 4px;
@@ -117,4 +96,5 @@ body { background-color: var(--bg); color: var(--text); font-family: -apple-syst
     z-index: 100;
     box-shadow: 0 0 15px rgba(229, 9, 20, 0.8);
     position: relative;
+    background-color: #333; /* Resalta el fondo en botones */
 }

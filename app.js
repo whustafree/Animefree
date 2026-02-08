@@ -12,9 +12,8 @@ const GENRE_MAP = {
     "Acción": "accion", "Artes Marciales": "artes-marciales", "Aventuras": "aventura", "Carreras": "carreras", "Ciencia Ficción": "ciencia-ficcion", "Comedia": "comedia", "Demencia": "demencia", "Demonios": "demonios", "Deportes": "deportes", "Drama": "drama", "Ecchi": "ecchi", "Escolares": "escolares", "Espacial": "espacial", "Fantasía": "fantasia", "Harem": "harem", "Histórico": "historico", "Infantil": "infantil", "Josei": "josei", "Juegos": "juegos", "Magia": "magia", "Mecha": "mecha", "Militar": "militar", "Misterio": "misterio", "Música": "musica", "Parodia": "parodia", "Policía": "policia", "Psicológico": "psicologico", "Recuentos de la vida": "recuentos-de-la-vida", "Romance": "romance", "Samurai": "samurai", "Seinen": "seinen", "Shoujo": "shoujo", "Shounen": "shounen", "Sobrenatural": "sobrenatural", "Superpoderes": "superpoderes", "Suspenso": "suspenso", "Terror (Gore)": "terror", "Vampiros": "vampiros", "Yaoi": "yaoi", "Yuri": "yuri"
 };
 
-// --- UTILIDAD TV: ENFOCAR PRIMER ELEMENTO ---
+// --- UTILIDAD TV: ENFOCAR ---
 function enfocarPrimerElemento(contenedorId) {
-    // Pequeño retraso para asegurar que el DOM se pintó
     setTimeout(() => {
         const container = document.getElementById(contenedorId);
         if (container) {
@@ -35,18 +34,16 @@ window.addEventListener('popstate', (event) => {
 
     if (hash === '#player') {
         player.style.display = 'flex';
-        enfocarPrimerElemento('player-controls'); // Enfocar controles al volver
+        enfocarPrimerElemento('player-controls');
     } else if (hash === '#details') {
         player.style.display = 'none'; 
         document.getElementById('video-wrapper').innerHTML = ''; 
         details.style.display = 'block';
-        // Al volver a detalles, enfocar el botón de Play
         setTimeout(() => document.getElementById('btn-play-latest').focus(), 100);
     } else {
         player.style.display = 'none';
         document.getElementById('video-wrapper').innerHTML = '';
         details.style.display = 'none';
-        // Al volver al inicio, enfocar la grid activa
         if(document.getElementById('tab-home').classList.contains('active')) enfocarPrimerElemento('grid-latest');
     }
 });
@@ -107,7 +104,6 @@ async function cargarEstrenos() {
     if (data) {
         grid.innerHTML = '';
         data.forEach(item => crearTarjeta(item, grid, 'latest'));
-        // TV: Enfocar el primer estreno al cargar
         enfocarPrimerElemento('grid-latest');
     }
 }
@@ -130,7 +126,6 @@ async function cargarMasResultados(limpiar = false) {
     if (data && data.media && data.media.length > 0) {
         data.media.forEach(anime => crearTarjeta(anime, grid, 'search'));
         searchPage++; hasMoreResults = data.hasNextPage || false;
-        // TV: Si es búsqueda nueva, enfocar primer resultado
         if(limpiar) enfocarPrimerElemento('grid-search');
     } else { hasMoreResults = false; if (limpiar) grid.innerHTML = '<div class="placeholder-msg"><p>Sin resultados</p></div>'; }
     isLoadingMore = false;
@@ -164,10 +159,7 @@ function crearTarjeta(item, container, context) {
             cargarDetallesAnime(realSlug).then(()=>prepararReproductor(item.slug, item.title, item.lastEp, img)); 
         }
     };
-    // Soporte para tecla ENTER en TV
-    card.onkeydown = (e) => {
-        if (e.key === 'Enter') card.click();
-    };
+    card.onkeydown = (e) => { if (e.key === 'Enter') card.click(); };
     container.appendChild(card);
 }
 
@@ -207,6 +199,7 @@ async function cargarDetallesAnime(slug) {
 
         if(info.episodes.length > 0) {
             document.getElementById('btn-play-latest').onclick = () => {
+                // Como ordenamos 1,2,3... el ÚLTIMO del array es el más nuevo
                 const lastIndex = info.episodes.length - 1;
                 currentEpisodeIndex = lastIndex; 
                 const lastEp = info.episodes[lastIndex];
@@ -216,7 +209,7 @@ async function cargarDetallesAnime(slug) {
             info.episodes.forEach((ep, index) => {
                 const b = document.createElement('div');
                 b.className = 'ep-card focusable';
-                b.setAttribute('tabindex', '0'); // Importante para TV
+                b.setAttribute('tabindex', '0');
                 if(watchedList.includes(ep.slug)) b.classList.add('watched');
                 b.innerText = `Ep ${ep.number}`;
                 b.onclick = () => {
@@ -226,8 +219,6 @@ async function cargarDetallesAnime(slug) {
                 b.onkeydown = (e) => { if (e.key === 'Enter') b.click(); };
                 grid.appendChild(b);
             });
-            
-            // TV: Enfocar el botón de "Continuar Viendo"
             setTimeout(() => document.getElementById('btn-play-latest').focus(), 100);
         }
     }
@@ -248,7 +239,7 @@ async function prepararReproductor(slug, title, number, cover) {
 
     const btnNext = document.getElementById('btn-next-ep');
     
-    // Lógica Siguiente (Orden Ascendente)
+    // Lógica Siguiente (ASCENDENTE): Si no es el último, sumamos 1
     if (currentAnimeData && currentEpisodeIndex < currentAnimeData.episodes.length - 1) {
         btnNext.style.display = 'block';
         btnNext.onclick = () => {
@@ -286,7 +277,6 @@ async function prepararReproductor(slug, title, number, cover) {
             if(i===0) btn.click();
         });
         
-        // TV: Enfocar el botón del primer servidor
         enfocarPrimerElemento('server-list');
     } else { document.getElementById('server-list').innerHTML = 'Error servidores'; }
 }
