@@ -4,6 +4,7 @@ const PROXIES = [ (u)=>u, (u)=>`https://api.allorigins.win/raw?url=${encodeURICo
 let currentAnimeData = null; 
 let currentEpisodeIndex = -1; 
 let deferredPrompt;
+
 // VARIABLES SCROLL
 let searchPage = 1; let currentQuery = ""; let searchMode = ""; let isLoadingMore = false; let hasMoreResults = true;
 
@@ -14,24 +15,19 @@ const GENRE_MAP = {
 // --- INSTALACIÓN ---
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const btn = document.getElementById('btn-install'); if(btn) { btn.style.display = 'inline-block'; btn.onclick = () => { btn.style.display = 'none'; deferredPrompt.prompt(); }; } });
 
-// --- CEREBRO DE NAVEGACIÓN (FIX CRÍTICO) ---
+// --- HISTORIAL NAV ---
 window.addEventListener('popstate', (event) => {
-    // Leemos el HASH para saber dónde debemos estar realmente
     const hash = window.location.hash;
-
     const player = document.getElementById('player-modal');
     const details = document.getElementById('details-modal');
 
     if (hash === '#player') {
-        // El usuario fue adelante hacia el player
         player.style.display = 'flex';
     } else if (hash === '#details') {
-        // El usuario volvió a detalles (o vino de un link)
-        player.style.display = 'none'; // Asegurar player cerrado
-        document.getElementById('video-wrapper').innerHTML = ''; // Limpiar video
-        details.style.display = 'block'; // Asegurar detalles abiertos
+        player.style.display = 'none'; 
+        document.getElementById('video-wrapper').innerHTML = ''; 
+        details.style.display = 'block'; 
     } else {
-        // Estamos en el inicio/root
         player.style.display = 'none';
         document.getElementById('video-wrapper').innerHTML = '';
         details.style.display = 'none';
@@ -39,7 +35,6 @@ window.addEventListener('popstate', (event) => {
 });
 
 function agregarHistorial(stateId) { 
-    // Solo agregamos si no estamos ya ahí para no duplicar
     if(window.location.hash !== `#${stateId}`) {
         history.pushState({ page: stateId }, "", `#${stateId}`); 
     }
@@ -56,7 +51,7 @@ function cambiarTab(tabId) {
     if(tabId === 'favorites') renderFavorites();
 }
 
-// --- FETCH (Anti-Error 404) ---
+// --- FETCH ---
 async function fetchData(endpoint) {
     if(!endpoint || endpoint.includes('undefined')) return null;
     for (const wrap of PROXIES) {
@@ -73,7 +68,6 @@ async function fetchData(endpoint) {
 
 window.onload = () => { 
     cargarEstrenos(); renderHistorial(); renderGeneros(); renderFavorites();
-    // Limpiamos el hash al inicio para empezar limpios
     history.replaceState({ page: 'home' }, "", " "); 
 };
 
@@ -136,10 +130,8 @@ function crearTarjeta(item, container, context) {
             cargarDetallesAnime(realSlug);
         } else if (context === 'latest') {
             const slugAnime = item.slug.split('-').slice(0, -1).join('-');
-            // Cargar detalles primero para tener el contexto, LUEGO abrir el player
             cargarDetallesAnime(slugAnime).then(() => {
                 if(currentAnimeData && currentAnimeData.episodes) {
-                    // Comparación laxa (==) por si uno es string y otro número
                     currentEpisodeIndex = currentAnimeData.episodes.findIndex(e => e.number == item.number);
                     prepararReproductor(item.slug, item.title, item.number, img);
                 }
@@ -154,14 +146,9 @@ function crearTarjeta(item, container, context) {
 // --- DETALLES ---
 async function cargarDetallesAnime(slug) {
     if(!slug) return;
-    
-    // Solo agregamos historial si NO estamos ya en modo detalles
-    if(window.location.hash !== '#details') {
-        agregarHistorial('details');
-    }
+    if(window.location.hash !== '#details') { agregarHistorial('details'); }
     
     document.getElementById('details-modal').style.display = 'block';
-    // Aseguramos que el player esté oculto
     document.getElementById('player-modal').style.display = 'none';
 
     document.getElementById('det-title').innerText = 'Cargando...';
@@ -172,6 +159,10 @@ async function cargarDetallesAnime(slug) {
     const info = await fetchData(`/anime/${slug}`);
     
     if(info) {
+        // --- AQUÍ ESTÁ EL FIX DE ORDEN ---
+        // Forzamos que los episodios estén de Mayor a Menor (Ej: 12, 11, ... 1)
+        info.episodes.sort((a,b) => parseFloat(b.number) - parseFloat(a.number));
+        
         currentAnimeData = info; 
         document.getElementById('det-title').innerText = info.title;
         document.getElementById('det-synopsis').innerText = (info.synopsis || "Sin sinopsis.").substring(0, 300) + "...";
@@ -187,6 +178,7 @@ async function cargarDetallesAnime(slug) {
 
         if(info.episodes.length > 0) {
             document.getElementById('btn-play-latest').onclick = () => {
+                // Como ordenamos DESC (12...1), el [0] es el ÚLTIMO capítulo salido
                 currentEpisodeIndex = 0; 
                 prepararReproductor(info.episodes[0].slug, info.title, info.episodes[0].number, info.cover);
             };
@@ -206,38 +198,30 @@ async function cargarDetallesAnime(slug) {
     }
 }
 
-function cerrarDetalles() { 
-    // Al cerrar detalles, volvemos atrás en el historial (al Home)
-    history.back(); 
-}
+function cerrarDetalles() { history.back(); }
 
 // --- REPRODUCTOR ---
 async function prepararReproductor(slug, title, number, cover) {
-    agregarHistorial('player'); // Esto pone #player en la URL
-    
+    agregarHistorial('player');
     document.getElementById('player-modal').style.display = 'flex';
     document.getElementById('player-title').innerText = `Ep ${number}: ${title}`;
     document.getElementById('video-wrapper').innerHTML = '';
     document.getElementById('server-list').innerHTML = 'Cargando...';
     
     if(currentAnimeData) guardarHistorial({animeSlug: currentAnimeData.slug, slug:slug, title:title, lastEp:number, cover:cover});
-    
     marcarComoVisto(slug);
 
-    // --- LOGICA BOTÓN SIGUIENTE (MEJORADA) ---
+    // LOGICA SIGUIENTE
     const btnNext = document.getElementById('btn-next-ep');
-    // Si currentEpisodeIndex > 0 significa que no estamos en el capítulo más nuevo (índice 0)
-    // Por tanto, existe un capítulo con índice menor (más nuevo / siguiente cronológicamente)
+    // Ahora que estamos seguros que la lista es DESCENDENTE (12, 11, ... 1)
+    // El "Siguiente" (Ej: ver 2 después del 1) está en un índice MENOR.
+    // Ej: [Ep2, Ep1]. Estoy en Ep1 (index 1). Index-1 = 0 (Ep2). Correcto.
     if (currentAnimeData && currentEpisodeIndex > 0) {
         btnNext.style.display = 'block';
         btnNext.onclick = () => {
-            // El "Siguiente" en la lista es el índice anterior (arrays van de más nuevo a más viejo)
             const nextEp = currentAnimeData.episodes[currentEpisodeIndex - 1]; 
-            currentEpisodeIndex--; // Actualizamos índice
-            
-            // Truco: Reemplazamos el estado actual para no llenar el historial de "atrás, atrás, atrás"
+            currentEpisodeIndex--; 
             history.replaceState({ page: 'player' }, "", `#player`); 
-            
             prepararReproductor(nextEp.slug, currentAnimeData.title, nextEp.number, currentAnimeData.cover);
         };
     } else {
@@ -269,18 +253,8 @@ async function prepararReproductor(slug, title, number, cover) {
     } else { document.getElementById('server-list').innerHTML = 'Error servidores'; }
 }
 
-function cerrarReproductor() { 
-    // Simplemente volvemos atrás. El 'popstate' se encargará de mostrar #details
-    history.back();
-}
-
-function abrirDetallesDesdePlayer() {
-    // ESTA ES LA CLAVE:
-    // Queremos volver a detalles, que es el estado anterior en el historial (#details)
-    // Así que history.back() es correcto.
-    // El evento 'popstate' detectará que la URL ahora es #details y ocultará el player automáticamente.
-    history.back();
-}
+function cerrarReproductor() { history.back(); }
+function abrirDetallesDesdePlayer() { history.back(); }
 
 // --- FAVORITOS ---
 function toggleFavorite() {
