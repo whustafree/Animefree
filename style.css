@@ -1,0 +1,20 @@
+:root { --main: #ff4500; --bg: #0f0f0f; --card: #1a1a1a; }
+body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; padding-bottom: 120px; }
+header { padding: 15px; background: #000; text-align: center; position: sticky; top: 0; z-index: 10; }
+h1 { color: var(--main); margin: 0 0 10px 0; font-size: 1.2rem; }
+
+.search-box { display: flex; gap: 5px; }
+input { flex: 1; padding: 12px; background: #222; border: 1px solid #333; color: #fff; border-radius: 5px; }
+button { background: var(--main); border: none; padding: 10px 20px; color: white; border-radius: 5px; }
+
+.anime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; padding: 10px; }
+.anime-card { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid #333; }
+.anime-card img { width: 100%; height: 200px; object-fit: cover; }
+.anime-card div { padding: 8px; font-size: 0.8rem; text-align: center; height: 35px; overflow: hidden; }
+
+#modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
+.close { position: absolute; top: 20px; right: 20px; font-size: 40px; color: var(--main); }
+.ep-list { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 20px; max-height: 40vh; overflow-y: auto; }
+.ep-btn { background: #333; padding: 12px; border-radius: 5px; min-width: 45px; text-align: center; }
+
+#debug-console { position: fixed; bottom: 0; left: 0; width: 100%; height: 80px; background: #000; color: #0f0; font-size: 10px; overflow-y: auto; border-top: 1px solid var(--main); opacity: 0.8; padding: 5px; }
