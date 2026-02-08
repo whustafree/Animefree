@@ -1,48 +1,80 @@
-// CONFIGURACIÓN DE APIS (Prioridad: Animetize -> Consumet Proxy)
-const API_SOURCES = [
-    "https://animetize-api.vercel.app/anime/animeflv/",
-    "https://api.consumet.org/anime/animeflv/" 
+// LISTA DE SERVIDORES (Mirrors de la API)
+// Si uno se cae, el sistema probará el siguiente automáticamente.
+const API_MIRRORS = [
+    "https://animetize-api.vercel.app/anime/animeflv",
+    "https://consumet-api-clone.vercel.app/anime/animeflv",
+    "https://api.consumet.org/anime/animeflv",
+    "https://consumet-jade.vercel.app/anime/animeflv"
 ];
 
-// Función maestra para obtener datos
+// LISTA DE PROXIES (Para saltar bloqueos CORS)
+const PROXIES = [
+    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    (url) => `https://thingproxy.freeboard.io/fetch/${url}`
+];
+
+// Función maestra para obtener datos (Intento múltiple)
 async function fetchData(endpoint) {
-    for (const source of API_SOURCES) {
-        try {
-            let url = source + endpoint;
-            
-            // Si es la API oficial, usamos proxy para evitar bloqueo
-            if (source.includes("consumet.org")) {
-                url = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    // 1. Probamos cada servidor de la lista
+    for (const baseUrl of API_MIRRORS) {
+        const targetUrl = `${baseUrl}/${endpoint}`;
+        
+        // 2. Para cada servidor, probamos rotando proxies
+        for (const wrapProxy of PROXIES) {
+            try {
+                const finalUrl = wrapProxy(targetUrl);
+                console.log(`Probando conexión: ${new URL(baseUrl).hostname} vía proxy...`);
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 seg límite
+
+                const response = await fetch(finalUrl, { 
+                    signal: controller.signal,
+                    referrerPolicy: "no-referrer" // Importante para privacidad
+                });
+                
+                clearTimeout(timeoutId);
+
+                if (!response.ok) continue;
+
+                const textData = await response.text();
+                let data;
+
+                // Intentamos parsear el JSON (A veces el proxy lo envuelve)
+                try {
+                    const json = JSON.parse(textData);
+                    data = json.contents ? JSON.parse(json.contents) : json;
+                } catch(e) {
+                    data = JSON.parse(textData); // Intento directo
+                }
+
+                // Verificamos si la data sirve
+                if (data.results || data.episodes || data.sources) {
+                    console.log("¡Conexión Exitosa!");
+                    return data;
+                }
+
+            } catch (e) {
+                console.warn(`Fallo ${baseUrl}:`, e.message);
+                // Si falla, el bucle continúa con el siguiente proxy/servidor
             }
-
-            const controller = new AbortController();
-            setTimeout(() => controller.abort(), 8000); // 8 segundos timeout
-
-            const response = await fetch(url, { signal: controller.signal });
-            if (!response.ok) continue;
-
-            const data = await response.json();
-            
-            // Validación de respuesta (AllOrigins a veces devuelve string)
-            const finalData = data.contents ? JSON.parse(data.contents) : data;
-            
-            if (finalData.results || finalData.episodes || finalData.sources) {
-                return finalData;
-            }
-        } catch (e) {
-            console.warn(`Fallo en ${source}:`, e);
         }
     }
-    alert("Error de red: No se pudo conectar a los servidores.");
+    
+    // Si llegamos aquí, todo falló
+    document.getElementById('animeGrid').innerHTML = 
+        '<div style="text-align:center; padding:20px; color:#ff5555;">⚠️ Error: Todos los servidores están ocupados.<br>Intenta de nuevo en 1 minuto.</div>';
     return null;
 }
 
-// INICIALIZACIÓN
+// --- LÓGICA DE LA INTERFAZ (Igual que antes) ---
+
 window.onload = () => cargarInicio();
 
 async function cargarInicio() {
     const grid = document.getElementById('animeGrid');
-    grid.innerHTML = '<div class="loader" style="grid-column: 1/-1; text-align:center;">Cargando estrenos...</div>';
+    grid.innerHTML = '<div class="loader" style="grid-column: 1/-1; text-align:center;">Buscando servidor activo...</div>';
     
     const data = await fetchData("recent-episodes");
     if (data && data.results) renderGrid(data.results);
@@ -57,7 +89,7 @@ async function buscarAnime() {
     
     const data = await fetchData(query);
     if (data && data.results) renderGrid(data.results);
-    else grid.innerHTML = '<div style="padding:20px; text-align:center; grid-column: 1/-1;">No se encontraron resultados.</div>';
+    else if (grid.innerHTML.includes("loader")) grid.innerHTML = '<div style="padding:20px; text-align:center;">Sin resultados.</div>';
 }
 
 function renderGrid(list) {
@@ -67,7 +99,7 @@ function renderGrid(list) {
     list.forEach(anime => {
         const card = document.createElement('div');
         card.className = 'anime-card';
-        // Proxy de imágenes para evitar cuadros grises
+        // Proxy de imágenes Weserv
         const img = `https://images.weserv.nl/?url=${encodeURIComponent(anime.image)}`;
         
         card.innerHTML = `
@@ -79,33 +111,32 @@ function renderGrid(list) {
     });
 }
 
-// MODAL Y EPISODIOS
 async function abrirDetalles(id, title) {
     const modal = document.getElementById('animeModal');
-    const epList = document.getElementById('modalEpisodes');
-    
     modal.style.display = 'flex';
     document.getElementById('modalTitle').innerText = title;
-    epList.innerHTML = 'Cargando episodios...';
+    
+    const list = document.getElementById('modalEpisodes');
+    list.innerHTML = 'Cargando info...';
     document.getElementById('modalLinks').innerHTML = '';
 
     const data = await fetchData(`info?id=${id}`);
     
     if (data && data.episodes) {
-        epList.innerHTML = '';
-        data.episodes.reverse().forEach(ep => { // Invertimos para que el 1 salga primero o último según gusto
+        list.innerHTML = '';
+        data.episodes.reverse().forEach(ep => {
             const btn = document.createElement('div');
             btn.className = 'ep-btn';
             btn.innerText = ep.number;
             btn.onclick = () => cargarLinks(ep.id);
-            epList.appendChild(btn);
+            list.appendChild(btn);
         });
     }
 }
 
 async function cargarLinks(epId) {
     const linksDiv = document.getElementById('modalLinks');
-    linksDiv.innerHTML = '<div style="text-align:center; padding:10px;">Obteniendo servidor...</div>';
+    linksDiv.innerHTML = '<div style="text-align:center;">Buscando video...</div>';
     
     const data = await fetchData(`watch?episodeId=${epId}`);
     linksDiv.innerHTML = '';
@@ -114,12 +145,12 @@ async function cargarLinks(epId) {
         data.sources.forEach(src => {
             const btn = document.createElement('a');
             btn.className = 'link-btn';
-            btn.innerText = `▶ Reproducir (${src.quality})`;
-            btn.href = src.url; // Abrir directo en reproductor del cel
+            btn.innerText = `▶ Ver en ${src.quality}`;
+            btn.href = src.url;
             linksDiv.appendChild(btn);
         });
     } else {
-        linksDiv.innerHTML = '<div style="text-align:center; color:#ff5555;">No hay enlaces disponibles.</div>';
+        linksDiv.innerHTML = 'No se encontraron videos.';
     }
 }
 
