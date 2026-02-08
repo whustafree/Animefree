@@ -1,8 +1,8 @@
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
 const PROXIES = [ 
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-    (u) => `https://thingproxy.freeboard.io/fetch/${u}`
+    (u) => `https://thingproxy.freeboard.io/fetch/${u}`,
+    (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`
 ];
 
 let currentAnimeData = null;
@@ -13,15 +13,16 @@ let hasMoreResults = true;
 let isLoadingMore = false;
 
 window.onload = () => {
+    if (window.location.protocol !== 'file:') {
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
     history.replaceState({ page: 'home' }, ""); 
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
     renderGeneros();
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 };
 
-// Gestión de navegación para cerrar modales con el botón atrás del móvil
 window.onpopstate = (event) => {
     if (document.getElementById('player-modal').style.display === 'flex') {
         cerrarReproductor(false);
@@ -34,14 +35,23 @@ window.onpopstate = (event) => {
 };
 
 async function fetchData(endpoint) {
+    // NORMALIZACIÓN: Quita tildes para evitar errores 403/404 en proxies
+    const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
     for (const wrap of PROXIES) {
         try {
-            const resp = await fetch(wrap(API_BASE + endpoint));
+            const resp = await fetch(wrap(API_BASE + cleanEndpoint));
             if (!resp.ok) continue;
-            let data = await resp.json();
-            if (data.contents) data = JSON.parse(data.contents);
-            return data.success ? data.data : data;
-        } catch (e) { console.error("Proxy error:", e); }
+            const text = await resp.text();
+            try {
+                let data = JSON.parse(text);
+                if (data.contents) data = JSON.parse(data.contents);
+                return data.success ? data.data : data;
+            } catch (e) {
+                console.error("Respuesta no es JSON válido (Proxy Error)");
+                continue;
+            }
+        } catch (e) { console.error("Fallo de red en proxy"); }
     }
     return null;
 }
@@ -96,7 +106,7 @@ function crearTarjeta(item, container, ctx) {
     
     card.onclick = () => {
         let slug = item.animeSlug || item.slug;
-        // REPARACIÓN 404: Limpiar slug de episodios para obtener la serie base
+        // LIMPIEZA DE SLUG: Evita error 404 en detalles
         slug = slug.replace(/-episodio-\d+$/, '').replace(/-\d+$/, '');
         cargarDetalles(slug);
     };
@@ -105,13 +115,12 @@ function crearTarjeta(item, container, ctx) {
 
 async function cargarDetalles(slug) {
     document.getElementById('details-modal').style.display = 'block';
-    history.pushState({ modal: 'details' }, "");
+    if(history.state?.modal !== 'details') history.pushState({ modal: 'details' }, "");
     
     const info = await fetchData(`/anime/${slug}`);
     if (info) {
         currentAnimeData = info;
         if(info.episodes) info.episodes.sort((a, b) => parseFloat(a.number) - parseFloat(b.number));
-        
         document.getElementById('det-title').innerText = info.title;
         document.getElementById('det-img').src = info.cover;
         document.getElementById('det-synopsis').innerText = info.synopsis || "Sin sinopsis.";
@@ -121,7 +130,6 @@ async function cargarDetalles(slug) {
         grid.innerHTML = info.episodes.map((ep, i) => 
             `<div class="ep-card" onclick="prepararVideo(${i})">${ep.number}</div>`
         ).join('');
-
         document.getElementById('btn-play-latest').onclick = () => prepararVideo(0);
         actualizarBotonFav();
         guardarHistorial(info);
@@ -150,7 +158,6 @@ async function playVideo(slug, number) {
         ).join('');
         setSource(data.servers[0].embed || data.servers[0].url);
         
-        // Control botón siguiente
         const btnNext = document.getElementById('btn-next-ep');
         btnNext.style.display = (currentAnimeData.episodes[currentEpisodeIndex + 1]) ? 'block' : 'none';
         btnNext.onclick = () => prepararVideo(currentEpisodeIndex + 1);
@@ -161,9 +168,11 @@ window.setSource = (url) => {
     document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
 };
 
-// NUEVA FUNCIÓN: Volver a la lista de capítulos
+// FUNCIÓN: Volver a la lista de capítulos
 window.volverALista = () => {
-    cerrarReproductor(true);
+    document.getElementById('player-modal').style.display = 'none';
+    document.getElementById('video-wrapper').innerHTML = '';
+    if(history.state?.modal === 'player') history.back();
 };
 
 function cerrarDetalles(back = true) {
@@ -177,7 +186,6 @@ function cerrarReproductor(back = true) {
     if(back) history.back();
 }
 
-// Persistencia y Favoritos
 function guardarHistorial(anime) {
     let hist = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     hist = hist.filter(h => h.slug !== anime.slug);
@@ -200,7 +208,6 @@ function actualizarBotonFav() {
     document.getElementById('btn-fav').innerText = isFav ? '❤️ En Favoritos' : '🤍 Añadir Favorito';
 }
 
-// UI Tabs
 function cambiarTab(id) {
     document.querySelectorAll('.tab-content, .nav-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${id}`).classList.add('active');
@@ -224,4 +231,4 @@ function renderHistorial() {
 }
 
 window.borrarHistorial = () => { localStorage.removeItem('animeHistory'); renderHistorial(); };
-window.toggleSettings = () => alert("Whustaf Web v1.5\nConfiguración en desarrollo.");
+window.toggleSettings = () => alert("Whustaf Web v1.6\nLimpieza de Slugs y Proxies activa.");

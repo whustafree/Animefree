@@ -1,99 +1,351 @@
 /* --- COMUNES --- */
-:root { --primary: #E50914; --bg: #141414; --text: #fff; --card: #1f1f1f; }
-body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; overflow-x: hidden; }
-a { text-decoration: none; color: white; }
+:root { 
+    --primary: #E50914; 
+    --bg: #141414; 
+    --text: #fff; 
+    --card: #1f1f1f; 
+}
+
+body { 
+    background: var(--bg); 
+    color: var(--text); 
+    font-family: sans-serif; 
+    margin: 0; 
+    overflow-x: hidden; 
+}
+
+a { 
+    text-decoration: none; 
+    color: white; 
+}
 
 /* Selector (index.html) */
-.selector-body { display: flex; align-items: center; justify-content: center; height: 100vh; }
-.selector-content { text-align: center; }
-.selector-options { display: flex; gap: 20px; justify-content: center; margin-top: 20px; }
-.mode-btn { background: #333; padding: 20px; border-radius: 10px; border: 2px solid #555; width: 150px; display: block; transition: 0.3s; }
-.mode-btn:hover, .mode-btn:focus { background: var(--primary); transform: scale(1.1); border-color: white; }
+.selector-body { 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    height: 100vh; 
+}
+
+.selector-content { 
+    text-align: center; 
+}
+
+.selector-options { 
+    display: flex; 
+    gap: 20px; 
+    justify-content: center; 
+    margin-top: 20px; 
+}
+
+.mode-btn { 
+    background: #333; 
+    padding: 20px; 
+    border-radius: 10px; 
+    border: 2px solid #555; 
+    width: 150px; 
+    display: block; 
+    transition: 0.3s; 
+}
+
+.mode-btn:hover, .mode-btn:focus { 
+    background: var(--primary); 
+    transform: scale(1.1); 
+    border-color: white; 
+}
 
 /* --- ESTILOS WEB (web.html) --- */
-.main-header { padding: 15px; background: rgba(0,0,0,0.9); position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between; align-items: center; }
-.logo { font-weight: 900; font-size: 1.2rem; } .logo span { color: var(--primary); }
-.bottom-nav { position: fixed; bottom: 0; width: 100%; background: #111; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #333; z-index: 100; }
-.nav-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
-.nav-btn.active { transform: scale(1.2); }
+.main-header { 
+    padding: 15px; 
+    background: rgba(0,0,0,0.9); 
+    position: sticky; 
+    top: 0; 
+    z-index: 50; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
 
-.tab-content { display: none; padding-bottom: 70px; }
-.tab-content.active { display: block; }
-.grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; padding: 10px; }
-.anime-card { background: var(--card); border-radius: 5px; overflow: hidden; position: relative; cursor: pointer; }
-.anime-card img { width: 100%; height: 160px; object-fit: cover; display: block; }
-.anime-card .info { padding: 5px; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.search-header-fixed { position: sticky; top: 0; background: #111; padding: 10px; z-index: 40; }
-.search-wrapper { display: flex; gap: 10px; }
-.search-wrapper input { flex: 1; padding: 10px; border-radius: 5px; border: none; background: #333; color: white; }
+.logo { 
+    font-weight: 900; 
+    font-size: 1.2rem; 
+} 
+
+.logo span { 
+    color: var(--primary); 
+}
+
+.bottom-nav { 
+    position: fixed; 
+    bottom: 0; 
+    width: 100%; 
+    background: #111; 
+    display: flex; 
+    justify-content: space-around; 
+    padding: 10px 0; 
+    border-top: 1px solid #333; 
+    z-index: 100; 
+}
+
+.nav-btn { 
+    background: none; 
+    border: none; 
+    font-size: 1.5rem; 
+    cursor: pointer; 
+}
+
+.nav-btn.active { 
+    transform: scale(1.2); 
+    color: var(--primary);
+}
+
+.tab-content { 
+    display: none; 
+    padding-bottom: 70px; 
+}
+
+.tab-content.active { 
+    display: block; 
+}
+
+.grid-container { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); 
+    gap: 10px; 
+    padding: 10px; 
+}
+
+.anime-card { 
+    background: var(--card); 
+    border-radius: 5px; 
+    overflow: hidden; 
+    position: relative; 
+    cursor: pointer; 
+}
+
+.anime-card img { 
+    width: 100%; 
+    height: 160px; 
+    object-fit: cover; 
+    display: block; 
+}
+
+.anime-card .info { 
+    padding: 5px; 
+    font-size: 0.8rem; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
+
+.search-header-fixed { 
+    position: sticky; 
+    top: 0; 
+    background: #111; 
+    padding: 10px; 
+    z-index: 40; 
+}
+
+.search-wrapper { 
+    display: flex; 
+    gap: 10px; 
+}
+
+.search-wrapper input { 
+    flex: 1; 
+    padding: 10px; 
+    border-radius: 5px; 
+    border: none; 
+    background: #333; 
+    color: white; 
+}
 
 /* Modales Web */
-.full-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; overflow-y: auto; }
-.player-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 300; flex-direction: column; justify-content: center; }
-.video-container iframe { width: 100%; height: 30vh; border: none; } /* Mobile size */
-@media (min-width: 768px) { .video-container iframe { height: 60vh; } } /* PC size */
+.full-modal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: var(--bg); 
+    z-index: 200; 
+    overflow-y: auto; 
+}
 
-/* --- ESTILOS TV (tv.html) --- */
-.tv-body { overflow: hidden; } /* TV no hace scroll en body */
-.tv-navbar { position: fixed; top: 0; width: 100%; padding: 20px 40px; display: flex; align-items: center; z-index: 100; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); box-sizing: border-box; }
-.tv-logo { font-size: 2rem; font-weight: 900; margin-right: 40px; } .tv-logo span { color: var(--primary); }
-.tv-link { background: transparent; border: none; color: #ccc; font-size: 1.2rem; margin-right: 20px; padding: 5px 15px; border-radius: 4px; }
-.tv-link.active { color: white; font-weight: bold; border-bottom: 3px solid var(--primary); }
+.backdrop-container { 
+    position: relative; 
+    height: 200px; 
+    width: 100%; 
+    overflow: hidden; 
+}
 
-.tv-view { display: none; height: 100vh; overflow-y: auto; padding-top: 80px; box-sizing: border-box; }
-.tv-view.active { display: block; }
+.backdrop-img { 
+    width: 100%; 
+    height: 100%; 
+    background-size: cover; 
+    background-position: center; 
+    filter: blur(10px); 
+    opacity: 0.5; 
+}
 
-/* Hero TV */
-.hero-section { height: 70vh; position: relative; margin-top: -80px; }
-.hero-bg { width: 100%; height: 100%; background-size: cover; background-position: top center; }
-.hero-overlay { position: absolute; inset: 0; background: linear-gradient(to right, #141414 30%, transparent 70%) , linear-gradient(to top, #141414 10%, transparent 50%); }
-.hero-content { position: absolute; bottom: 20%; left: 5%; width: 40%; }
-.hero-title { font-size: 4rem; line-height: 1; margin-bottom: 20px; }
-.hero-btn { padding: 10px 25px; font-size: 1.2rem; border: none; border-radius: 4px; margin-right: 15px; cursor: pointer; }
-.hero-btn.primary { background: white; color: black; font-weight: bold; }
-.hero-btn.secondary { background: rgba(100,100,100,0.7); color: white; }
+.backdrop-overlay { 
+    position: absolute; 
+    inset: 0; 
+    background: linear-gradient(to top, var(--bg), transparent); 
+}
 
-/* Filas TV */
-.tv-rows { padding-left: 5%; position: relative; top: -50px; }
-.tv-row-title { font-size: 1.5rem; margin-bottom: 10px; font-weight: bold; }
-.tv-row-container { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 30px; scrollbar-width: none; }
-.tv-row-container::-webkit-scrollbar { display: none; }
-.tv-row-container .anime-card { min-width: 200px; transition: transform 0.2s; }
-.tv-row-container .anime-card img { height: 280px; }
+.modal-content { 
+    padding: 20px; 
+    margin-top: -100px; 
+    position: relative; 
+}
 
-/* Grids TV (Buscar/Favs) */
-.tv-grid-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; padding: 20px 5%; }
-.tv-input { width: 50%; padding: 15px; font-size: 1.2rem; background: #333; border: 2px solid #555; color: white; border-radius: 5px; }
-.tv-search-header { padding: 0 5%; margin-bottom: 20px; }
+.cover-shadow { 
+    width: 140px; 
+    border-radius: 10px; 
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5); 
+}
 
-/* Foco TV (ESENCIAL) */
-.focusable:focus { outline: 4px solid var(--primary); transform: scale(1.1); z-index: 10; box-shadow: 0 0 20px rgba(229, 9, 20, 0.8); background: #333; }
+.details-header { 
+    display: flex; 
+    gap: 20px; 
+    align-items: flex-end; 
+    margin-bottom: 20px; 
+}
 
-/* Modales TV */
-.tv-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 500; align-items: center; justify-content: center; }
-.tv-modal-content { display: flex; width: 80%; height: 70%; background: #1f1f1f; border-radius: 10px; overflow: hidden; }
-.tv-modal-left img { width: 300px; height: 100%; object-fit: cover; }
-.tv-modal-right { padding: 40px; flex: 1; overflow-y: auto; }
-.tv-episodes-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-top: 20px; }
-.tv-ep-btn { background: #333; padding: 10px; text-align: center; border-radius: 4px; cursor: pointer; }
+.episodes-grid { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); 
+    gap: 10px; 
+    margin-top: 20px; 
+}
 
-.tv-player-overlay { display: none; position: fixed; inset: 0; background: black; z-index: 1000; }
-.tv-close-player { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.5); border: none; color: white; font-size: 2rem; }
-/* Estilos faltantes para Web Modal */
-.backdrop-container { position: relative; height: 200px; width: 100%; overflow: hidden; }
-.backdrop-img { width: 100%; height: 100%; background-size: cover; background-position: center; filter: blur(10px); opacity: 0.5; }
-.backdrop-overlay { position: absolute; inset: 0; background: linear-gradient(to top, var(--bg), transparent); }
-.modal-content { padding: 20px; margin-top: -100px; position: relative; }
-.cover-shadow { width: 140px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
-.details-header { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; }
-.episodes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px; margin-top: 20px; }
-.ep-card { background: #333; padding: 15px; text-align: center; border-radius: 5px; cursor: pointer; }
-.ep-card:hover { background: var(--primary); }
-.primary-btn { width: 100%; padding: 15px; background: var(--primary); border: none; color: white; border-radius: 5px; font-weight: bold; margin: 15px 0; }
-.fav-btn { background: #444; border: none; color: white; padding: 8px 15px; border-radius: 20px; margin-top: 10px; cursor: pointer; }
-.genre-chip { background: #333; border: none; color: white; padding: 5px 15px; border-radius: 20px; white-space: nowrap; cursor: pointer; }
-.genre-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; }
-.close-btn { position: absolute; top: 10px; right: 20px; background: rgba(0,0,0,0.5); border: none; color: white; font-size: 1.5rem; border-radius: 50%; width: 40px; height: 40px; z-index: 10; }
+.ep-card { 
+    background: #333; 
+    padding: 15px; 
+    text-align: center; 
+    border-radius: 5px; 
+    cursor: pointer; 
+}
+
+.ep-card:hover { 
+    background: var(--primary); 
+}
+
+.primary-btn { 
+    width: 100%; 
+    padding: 15px; 
+    background: var(--primary); 
+    border: none; 
+    color: white; 
+    border-radius: 5px; 
+    font-weight: bold; 
+    margin: 15px 0; 
+    cursor: pointer;
+}
+
+.fav-btn { 
+    background: #444; 
+    border: none; 
+    color: white; 
+    padding: 8px 15px; 
+    border-radius: 20px; 
+    margin-top: 10px; 
+    cursor: pointer; 
+}
+
+.genre-chip { 
+    background: #333; 
+    border: none; 
+    color: white; 
+    padding: 5px 15px; 
+    border-radius: 20px; 
+    white-space: nowrap; 
+    cursor: pointer; 
+}
+
+.genre-scroll { 
+    display: flex; 
+    gap: 10px; 
+    overflow-x: auto; 
+    padding: 10px 0; 
+    scrollbar-width: none; 
+}
+
+.close-btn { 
+    position: absolute; 
+    top: 10px; 
+    right: 20px; 
+    background: rgba(0,0,0,0.5); 
+    border: none; 
+    color: white; 
+    font-size: 1.5rem; 
+    border-radius: 50%; 
+    width: 40px; 
+    height: 40px; 
+    z-index: 10; 
+    cursor: pointer;
+}
+
+/* Reproductor Web Responsivo */
+.player-modal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: #000; 
+    z-index: 300; 
+    flex-direction: column; 
+    justify-content: center; 
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%; /* Relación 16:9 */
+    background: #000;
+}
+
+#video-wrapper {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+}
+
+#video-wrapper iframe { 
+    width: 100%; 
+    height: 100%; 
+    border: none; 
+}
+
+.player-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    padding: 15px;
+}
+
+.control-btn {
+    background: #222;
+    color: white;
+    border: 1px solid #444;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.control-btn:active { 
+    background: var(--primary); 
+}
+
+.close-player { 
+    border-color: var(--primary); 
+    color: var(--primary); 
+}
+
 /* Feedback de carga (Spinner) */
 .loader {
     border: 4px solid #333;
@@ -104,40 +356,248 @@ a { text-decoration: none; color: white; }
     animation: spin 1s linear infinite;
     margin: 20px auto;
 }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* Mejoras en el Reproductor */
-.player-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    padding: 15px;
+@keyframes spin { 
+    0% { transform: rotate(0deg); } 
+    100% { transform: rotate(360deg); } 
 }
-.control-btn {
-    background: #222;
-    color: white;
-    border: 1px solid #444;
-    padding: 10px 15px;
-    border-radius: 5px;
-    font-size: 0.9rem;
+
+/* --- ESTILOS TV (tv.html) --- */
+.tv-body { 
+    overflow: hidden; 
+}
+
+.tv-navbar { 
+    position: fixed; 
+    top: 0; 
+    width: 100%; 
+    padding: 20px 40px; 
+    display: flex; 
+    align-items: center; 
+    z-index: 100; 
+    background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); 
+    box-sizing: border-box; 
+}
+
+.tv-logo { 
+    font-size: 2rem; 
+    font-weight: 900; 
+    margin-right: 40px; 
+} 
+
+.tv-logo span { 
+    color: var(--primary); 
+}
+
+.tv-link { 
+    background: transparent; 
+    border: none; 
+    color: #ccc; 
+    font-size: 1.2rem; 
+    margin-right: 20px; 
+    padding: 5px 15px; 
+    border-radius: 4px; 
+}
+
+.tv-link.active { 
+    color: white; 
+    font-weight: bold; 
+    border-bottom: 3px solid var(--primary); 
+}
+
+.tv-view { 
+    display: none; 
+    height: 100vh; 
+    overflow-y: auto; 
+    padding-top: 80px; 
+    box-sizing: border-box; 
+}
+
+.tv-view.active { 
+    display: block; 
+}
+
+/* Hero TV */
+.hero-section { 
+    height: 70vh; 
+    position: relative; 
+    margin-top: -80px; 
+}
+
+.hero-bg { 
+    width: 100%; 
+    height: 100%; 
+    background-size: cover; 
+    background-position: top center; 
+}
+
+.hero-overlay { 
+    position: absolute; 
+    inset: 0; 
+    background: linear-gradient(to right, #141414 30%, transparent 70%) , linear-gradient(to top, #141414 10%, transparent 50%); 
+}
+
+.hero-content { 
+    position: absolute; 
+    bottom: 20%; 
+    left: 5%; 
+    width: 40%; 
+}
+
+.hero-title { 
+    font-size: 4rem; 
+    line-height: 1; 
+    margin-bottom: 20px; 
+}
+
+.hero-btn { 
+    padding: 10px 25px; 
+    font-size: 1.2rem; 
+    border: none; 
+    border-radius: 4px; 
+    margin-right: 15px; 
+    cursor: pointer; 
+}
+
+.hero-btn.primary { 
+    background: white; 
+    color: black; 
+    font-weight: bold; 
+}
+
+.hero-btn.secondary { 
+    background: rgba(100,100,100,0.7); 
+    color: white; 
+}
+
+/* Filas TV */
+.tv-rows { 
+    padding-left: 5%; 
+    position: relative; 
+    top: -50px; 
+}
+
+.tv-row-title { 
+    font-size: 1.5rem; 
+    margin-bottom: 10px; 
+    font-weight: bold; 
+}
+
+.tv-row-container { 
+    display: flex; 
+    gap: 20px; 
+    overflow-x: auto; 
+    padding-bottom: 30px; 
+    scrollbar-width: none; 
+}
+
+.tv-row-container::-webkit-scrollbar { 
+    display: none; 
+}
+
+.tv-row-container .anime-card { 
+    min-width: 200px; 
+    transition: transform 0.2s; 
+}
+
+.tv-row-container .anime-card img { 
+    height: 280px; 
+}
+
+/* Grids TV */
+.tv-grid-results { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+    gap: 20px; 
+    padding: 20px 5%; 
+}
+
+.tv-input { 
+    width: 50%; 
+    padding: 15px; 
+    font-size: 1.2rem; 
+    background: #333; 
+    border: 2px solid #555; 
+    color: white; 
+    border-radius: 5px; 
+}
+
+.tv-search-header { 
+    padding: 0 5%; 
+    margin-bottom: 20px; 
+}
+
+/* Foco TV (ESENCIAL) */
+.focusable:focus { 
+    outline: 4px solid var(--primary); 
+    transform: scale(1.1); 
+    z-index: 10; 
+    box-shadow: 0 0 20px rgba(229, 9, 20, 0.8); 
+    background: #333; 
+}
+
+/* Modales TV */
+.tv-modal { 
+    display: none; 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(0,0,0,0.9); 
+    z-index: 500; 
+    align-items: center; 
+    justify-content: center; 
+}
+
+.tv-modal-content { 
+    display: flex; 
+    width: 80%; 
+    height: 70%; 
+    background: #1f1f1f; 
+    border-radius: 10px; 
+    overflow: hidden; 
+}
+
+.tv-modal-left img { 
+    width: 300px; 
+    height: 100%; 
+    object-fit: cover; 
+}
+
+.tv-modal-right { 
+    padding: 40px; 
+    flex: 1; 
+    overflow-y: auto; 
+}
+
+.tv-episodes-list { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); 
+    gap: 10px; 
+    margin-top: 20px; 
+}
+
+.tv-ep-btn { 
+    background: #333; 
+    padding: 10px; 
+    text-align: center; 
+    border-radius: 4px; 
+    cursor: pointer; 
+}
+
+.tv-player-overlay { 
+    display: none; 
+    position: fixed; 
+    inset: 0; 
+    background: black; 
+    z-index: 1000; 
+}
+
+.tv-close-player { 
+    position: absolute; 
+    top: 20px; 
+    right: 20px; 
+    background: rgba(0,0,0,0.5); 
+    border: none; 
+    color: white; 
+    font-size: 2rem; 
     cursor: pointer;
-}
-.control-btn:active { background: var(--primary); }
-.close-player { border-color: var(--primary); color: var(--primary); }
-
-/* Video Responsivo 16:9 */
-.video-container {
-    position: relative;
-    width: 100%;
-    padding-top: 56.25%; /* Relación 16:9 */
-    background: #000;
-}
-#video-wrapper {
-    position: absolute;
-    top: 0; left: 0; bottom: 0; right: 0;
-}
-#video-wrapper iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
 }
