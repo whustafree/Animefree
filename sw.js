@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animofree-v10-jikan';
+const CACHE_NAME = 'animofree-v11-jikan';
 const ASSETS = [
   './',
   './index.html',
