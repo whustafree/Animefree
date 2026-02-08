@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animofree-v37-tv-fix';
+const CACHE_NAME = 'animofree-v38-clean';
 const ASSETS = [
   './',
   './index.html',

@@ -26,7 +26,7 @@ function enfocarPrimerElemento(contenedorId) {
 // --- INSTALACIÓN ---
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const btn = document.getElementById('btn-install'); if(btn) { btn.style.display = 'inline-block'; btn.onclick = () => { btn.style.display = 'none'; deferredPrompt.prompt(); }; } });
 
-// --- HISTORIAL NAV ---
+// --- HISTORIAL NAV (FIXED) ---
 window.addEventListener('popstate', (event) => {
     const hash = window.location.hash;
     const player = document.getElementById('player-modal');
@@ -34,11 +34,12 @@ window.addEventListener('popstate', (event) => {
 
     if (hash === '#player') {
         player.style.display = 'flex';
+        details.style.display = 'none'; // FIX DOBLE X: Ocultar detalles si está el player
         enfocarPrimerElemento('player-controls');
     } else if (hash === '#details') {
         player.style.display = 'none'; 
         document.getElementById('video-wrapper').innerHTML = ''; 
-        details.style.display = 'block';
+        details.style.display = 'block'; // Mostrar detalles al volver
         setTimeout(() => document.getElementById('btn-play-latest').focus(), 100);
     } else {
         player.style.display = 'none';
@@ -230,6 +231,7 @@ function cerrarDetalles() { history.back(); }
 async function prepararReproductor(slug, title, number, cover) {
     agregarHistorial('player');
     document.getElementById('player-modal').style.display = 'flex';
+    document.getElementById('details-modal').style.display = 'none'; // FIX DOBLE X: Asegurar que detalles no se vea
     document.getElementById('player-title').innerText = `Ep ${number}: ${title}`;
     document.getElementById('video-wrapper').innerHTML = '';
     document.getElementById('server-list').innerHTML = 'Cargando...';
