@@ -1,13 +1,56 @@
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
-const PROXIES = [ (u)=>u, (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, (u)=>`https://corsproxy.io/?${encodeURIComponent(u)}` ];
+const PROXIES = [ 
+    (u) => u, 
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, 
+    (u) => `https://corsproxy.io/?${encodeURIComponent(u)}` 
+];
 let currentAnimeSlug = null;
 let deferredPrompt;
 
-// --- LISTA DE GÉNEROS ---
-const GENEROS = [
-    "Isekai", "Ecchi", "Terror", "Gore", "Acción", "Romance", 
-    "Comedia", "Fantasía", "Harem", "Seinen", "Shonen", "Hentai"
-];
+// --- MAPA DE GÉNEROS (Nombre Botón -> Código Real AnimeFLV) ---
+const GENRE_MAP = {
+    "Acción": "accion",
+    "Artes Marciales": "artes-marciales",
+    "Aventuras": "aventura",
+    "Carreras": "carreras",
+    "Ciencia Ficción": "ciencia-ficcion",
+    "Comedia": "comedia",
+    "Demencia": "demencia",
+    "Demonios": "demonios",
+    "Deportes": "deportes",
+    "Drama": "drama",
+    "Ecchi": "ecchi",
+    "Escolares": "escolares",
+    "Espacial": "espacial",
+    "Fantasía": "fantasia",
+    "Harem": "harem",
+    "Histórico": "historico",
+    "Infantil": "infantil",
+    "Josei": "josei",
+    "Juegos": "juegos",
+    "Magia": "magia",
+    "Mecha": "mecha",
+    "Militar": "militar",
+    "Misterio": "misterio",
+    "Música": "musica",
+    "Parodia": "parodia",
+    "Policía": "policia",
+    "Psicológico": "psicologico",
+    "Recuentos de la vida": "recuentos-de-la-vida",
+    "Romance": "romance",
+    "Samurai": "samurai",
+    "Seinen": "seinen",
+    "Shoujo": "shoujo",
+    "Shounen": "shounen",
+    "Sobrenatural": "sobrenatural",
+    "Superpoderes": "superpoderes",
+    "Suspenso": "suspenso",
+    "Terror (Gore)": "terror", // Gore suele estar aquí
+    "Vampiros": "vampiros",
+    "Yaoi": "yaoi",
+    "Yuri": "yuri"
+    // NOTA: "Isekai" no es categoría oficial, se busca por texto.
+};
 
 // --- INSTALACIÓN ---
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -51,7 +94,7 @@ async function fetchData(endpoint) {
 window.onload = () => { 
     cargarEstrenos(); 
     renderHistorial();
-    renderGeneros(); // <--- CARGAMOS LOS BOTONES
+    renderGeneros(); 
     history.replaceState({ page: 'home' }, "", ""); 
 };
 
@@ -61,12 +104,19 @@ function renderGeneros() {
     if(!container) return;
     container.innerHTML = '';
     
-    GENEROS.forEach(gen => {
+    // Botón especial Isekai (Búsqueda manual)
+    const btnIsekai = document.createElement('button');
+    btnIsekai.className = 'genre-chip focusable';
+    btnIsekai.innerText = "Isekai";
+    btnIsekai.onclick = () => buscar("Isekai", true); // true = es texto
+    container.appendChild(btnIsekai);
+
+    // Resto de géneros oficiales
+    Object.keys(GENRE_MAP).forEach(label => {
         const btn = document.createElement('button');
         btn.className = 'genre-chip focusable';
-        btn.innerText = gen;
-        btn.setAttribute('tabindex', '0');
-        btn.onclick = () => buscar(gen); // Al hacer clic busca ese género
+        btn.innerText = label;
+        btn.onclick = () => buscar(label, false); // false = es filtro
         container.appendChild(btn);
     });
 }
@@ -79,20 +129,40 @@ async function cargarEstrenos() {
     if (data) data.forEach(item => crearTarjeta(item, grid, 'latest'));
 }
 
-// --- SEARCH ---
-async function buscar(termino = null) {
-    // Si viene un término (click en botón género), lo usamos. Si no, leemos el input.
-    const q = termino || document.getElementById('inp').value;
+// --- SEARCH INTELIGENTE ---
+async function buscar(termino = null, esTexto = true) {
+    let q = termino || document.getElementById('inp').value;
     if (!q) return;
     
-    // Si fue por botón, ponemos el texto en el input para que se vea
+    // Si viene del input manual, siempre es texto
+    if (!termino) esTexto = true;
+    
     if(termino) document.getElementById('inp').value = termino;
 
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader">Buscando...</div>';
     
-    // NOTA: Usamos el buscador general porque es más flexible para encontrar "Gore" o "Isekai"
-    const data = await fetchData(`/search?query=${encodeURIComponent(q)}`);
+    let endpoint = '';
+    
+    if (esTexto) {
+        // Búsqueda por nombre (Para Isekai o escritura manual)
+        endpoint = `/search?query=${encodeURIComponent(q)}`;
+    } else {
+        // Búsqueda por CATEGORÍA REAL (La solución)
+        // Usamos el endpoint "by-url" para simular un filtro de la web oficial
+        const slug = GENRE_MAP[q];
+        if (slug) {
+            // Construimos la URL de navegación de AnimeFLV
+            // Nota: genre[] es la sintaxis que usa la web
+            const webUrl = `https://www3.animeflv.net/browse?genre[]=${slug}&order=default&page=1`;
+            endpoint = `/search/by-url?url=${encodeURIComponent(webUrl)}`;
+        } else {
+            // Fallback si algo falla
+            endpoint = `/search?query=${encodeURIComponent(q)}`;
+        }
+    }
+    
+    const data = await fetchData(endpoint);
     grid.innerHTML = '';
     
     if (data && data.media) {
@@ -190,7 +260,6 @@ async function prepararReproductor(slug, title, number, cover) {
         data.servers.forEach((s, i) => {
             const btn = document.createElement('button');
             btn.className = 'focusable';
-            btn.setAttribute('tabindex', '0');
             btn.innerText = s.name;
             btn.onclick = () => {
                 document.querySelectorAll('.server-list button').forEach(b=>b.classList.remove('active'));
