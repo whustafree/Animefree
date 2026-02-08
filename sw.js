@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animofree-v17-pro'; // <--- V13
+const CACHE_NAME = 'animofree-v18-pro'; // <--- V13
 // ... el resto igual que siempre ...
 const ASSETS = [
   './',
