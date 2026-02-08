@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Akiyama Lite</title>
+    <title>Whustaf Anime</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#121212">
@@ -12,38 +12,39 @@
 <body>
 
     <header class="app-header">
-        <div class="logo">AKIYAMA</div>
+        <div class="logo">WHUSTAF</div>
         <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="Buscar anime...">
-            <button onclick="buscarAnime()">🔍</button>
+            <input type="text" id="inp" placeholder="Buscar anime...">
+            <button onclick="buscar()">🔍</button>
         </div>
     </header>
 
-    <main id="contentArea">
-        <h2 class="section-title">Últimos Episodios</h2>
-        <div id="animeGrid" class="grid-container">
-            <div class="loader">Cargando cartelera...</div>
+    <main>
+        <h2 class="section-title">Temporada Actual</h2>
+        <div id="grid" class="grid-container">
+            <div class="loader">Cargando Jikan API...</div>
         </div>
     </main>
 
-    <div id="animeModal" class="modal">
+    <div id="modal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="cerrarModal()">&times;</span>
-            <h2 id="modalTitle">Título</h2>
-            <div id="modalEpisodes" class="episodes-list"></div>
-            <div id="modalLinks" class="links-list"></div>
+            <h2 id="mTitle">Título</h2>
+            <div id="mEps" class="episodes-list"></div>
+            <div id="mLinks" class="links-list"></div>
         </div>
     </div>
 
     <nav class="bottom-nav">
-        <button onclick="cargarInicio()" class="active">🏠 Inicio</button>
-        <button onclick="document.getElementById('searchInput').focus()">🔍 Buscar</button>
+        <button onclick="init()" class="active">🏠 Inicio</button>
+        <button onclick="document.getElementById('inp').focus()">🔍 Buscar</button>
         <button onclick="location.reload()">🔄 Recargar</button>
     </nav>
 
+    <div id="debug-console"></div>
+
     <script src="app.js"></script>
     <script>
-        // Registrar Service Worker para que sea App
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(console.error);
         }
