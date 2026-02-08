@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animofree-v7';
+const CACHE_NAME = 'animofree-v7'; // <--- CAMBIADO A V7
 const ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,6 @@ const ASSETS = [
   './manifest.json'
 ];
 
-// Instalación: Guardamos los archivos en la caché del celular
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -16,7 +15,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activación: Limpiamos cachés viejas si actualizamos la app
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -29,17 +27,11 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: Interceptamos las peticiones. Si no hay internet, usamos la caché.
 self.addEventListener('fetch', (event) => {
-  // Solo cacheamos archivos locales, no las peticiones a la API (porque son dinámicas)
-  if (event.request.url.includes('api.consumet.org') || event.request.url.includes('api.allorigins.win')) {
-    return;
+  if (event.request.url.includes('api') || event.request.url.includes('vercel')) {
+    return; // No cachear APIs
   }
-
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        return response || fetch(event.request);
-      })
+    caches.match(event.request).then((response) => response || fetch(event.request))
   );
 });
