@@ -1,5 +1,5 @@
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
-// Proxies rotativos para saltar bloqueos
+// Proxies rotativos
 const PROXIES = [ 
     (u) => u, 
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, 
@@ -8,9 +8,8 @@ const PROXIES = [
 
 let currentAnimeSlug = null;
 
-// --- SISTEMA DE NAVEGACIÓN POR GESTOS (HISTORIAL) ---
+// --- HISTORIAL Y GESTOS ---
 window.addEventListener('popstate', (event) => {
-    // Si hay un modal abierto, lo cerramos en lugar de salir de la app
     const player = document.getElementById('player-modal');
     const details = document.getElementById('details-modal');
     const search = document.getElementById('searchContainer');
@@ -28,7 +27,7 @@ window.addEventListener('popstate', (event) => {
         search.style.display = 'none';
         return;
     }
-    // Si estamos en la vista de búsqueda, volvemos al inicio
+    // Si estamos en búsqueda, volver a inicio
     const searchView = document.getElementById('view-search');
     if (searchView && searchView.classList.contains('active')) {
         cambiarVista('home');
@@ -40,7 +39,7 @@ function agregarHistorial(stateId) {
     history.pushState({ page: stateId }, "", `#${stateId}`);
 }
 
-// --- CORE FETCH ---
+// --- CORE ---
 async function fetchData(endpoint) {
     for (const wrap of PROXIES) {
         try {
@@ -58,24 +57,26 @@ async function fetchData(endpoint) {
 window.onload = () => { 
     cargarEstrenos(); 
     renderHistorial(); 
-    // Estado base para que el botón atrás no saque de la app inmediatamente
     history.replaceState({ page: 'home' }, "", "");
 };
 
-// --- NAVEGACIÓN VISTAS ---
+// --- NAVEGACIÓN (CON FIX DE SCROLL) ---
 function cambiarVista(id) {
-    // 1. Ocultar todas las vistas
+    // 1. Ocultar vistas
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     
-    // 2. Mostrar la vista deseada
+    // 2. Mostrar vista nueva
     const view = document.getElementById(`view-${id}`);
     if (view) view.classList.add('active');
 
-    // 3. Iluminar botón (SOLO SI EXISTE - AQUÍ ESTABA EL ERROR)
+    // 3. Activar botón del menú (si existe)
     const btn = document.getElementById(`btn-${id}`);
     if (btn) btn.classList.add('active');
     
+    // 4. ¡EL ARREGLO! Forzar subir al inicio de la página
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     if(id === 'history') renderHistorial();
 }
 
@@ -91,7 +92,7 @@ function toggleSearch() {
     }
 }
 
-// --- LÓGICA ---
+// --- LOGICA ---
 async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
     const data = await fetchData('/list/latest-episodes');
@@ -104,11 +105,10 @@ async function buscar() {
     const q = document.getElementById('inp').value;
     if (!q) return;
 
-    // Ocultar barra de búsqueda y teclado
     document.getElementById('searchContainer').style.display = 'none';
     document.getElementById('inp').blur();
 
-    cambiarVista('search'); // Cambiamos a la vista de resultados
+    cambiarVista('search'); // Esto ahora subirá la pantalla automáticamente
     
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader">Buscando...</div>';
@@ -123,7 +123,7 @@ async function buscar() {
     }
 }
 
-// --- UI COMPONENTS ---
+// --- UI ---
 function crearTarjeta(item, container, context) {
     const card = document.createElement('div');
     card.className = 'anime-card focusable';
@@ -150,7 +150,6 @@ function crearTarjeta(item, container, context) {
         if (context === 'search') {
             cargarDetallesAnime(item.slug);
         } else if (context === 'latest') {
-            // Truco para obtener slug de anime desde slug de episodio
             const partes = item.slug.split('-');
             partes.pop(); 
             currentAnimeSlug = partes.join('-'); 
@@ -160,20 +159,20 @@ function crearTarjeta(item, container, context) {
             currentAnimeSlug = item.animeSlug;
         }
     };
-    
-    // Soporte para TV (Enter)
     card.onkeydown = (e) => { if(e.key === 'Enter') card.click(); };
-    
     container.appendChild(card);
 }
 
 // --- DETALLES ---
 async function cargarDetallesAnime(slug) {
     currentAnimeSlug = slug;
-    agregarHistorial('details'); // Agregamos estado para poder volver con gesto
+    agregarHistorial('details');
 
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
+    
+    // Forzar scroll arriba dentro del modal también
+    modal.scrollTop = 0;
     
     document.getElementById('det-title').innerText = 'Cargando...';
     document.getElementById('det-episodes').innerHTML = '<div class="loader">...</div>';
@@ -192,7 +191,6 @@ async function cargarDetallesAnime(slug) {
         epList.innerHTML = '';
         
         if (info.episodes && info.episodes.length > 0) {
-            // Botón reproducir el más reciente
             const lastEp = info.episodes[0];
             const btnPlay = document.getElementById('btn-play-latest');
             if(btnPlay) btnPlay.onclick = () => prepararReproductor(lastEp.slug, info.title, lastEp.number, info.cover);
@@ -210,28 +208,18 @@ async function cargarDetallesAnime(slug) {
     }
 }
 
-function cerrarDetalles() {
-    history.back(); // Usamos el historial para cerrar
-}
+function cerrarDetalles() { history.back(); }
 
-// --- REPRODUCTOR ---
+// --- REPRODUCTOR CON BLOQUEO DE ANUNCIOS ---
 async function prepararReproductor(slug, title, number, cover) {
-    agregarHistorial('player'); // Agregamos estado
-
+    agregarHistorial('player');
     const modal = document.getElementById('player-modal');
     modal.style.display = 'flex';
     document.getElementById('player-title').innerText = `${title} - Ep ${number}`;
     document.getElementById('video-wrapper').innerHTML = '';
     
-    // Guardar Historial de visualización
     if (currentAnimeSlug) {
-        guardarHistorial({ 
-            animeSlug: currentAnimeSlug,
-            slug: slug, 
-            title: title, 
-            lastEp: number, 
-            cover: cover 
-        });
+        guardarHistorial({ animeSlug: currentAnimeSlug, slug: slug, title: title, lastEp: number, cover: cover });
     }
 
     const list = document.getElementById('server-list');
@@ -251,7 +239,12 @@ async function prepararReproductor(slug, title, number, cover) {
             btn.onclick = () => {
                 document.querySelectorAll('.server-list button').forEach(b=>b.classList.remove('active'));
                 btn.classList.add('active');
-                document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" allowfullscreen allow="autoplay"></iframe>`;
+                
+                // AQUÍ ESTÁ LA MAGIA: sandbox sin 'allow-popups'
+                // Esto bloquea que se abran pestañas nuevas al hacer clic
+                const iframeHTML = `<iframe src="${url}" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>`;
+                
+                document.getElementById('video-wrapper').innerHTML = iframeHTML;
             };
             list.appendChild(btn);
             if(i===0) btn.click();
@@ -262,16 +255,11 @@ async function prepararReproductor(slug, title, number, cover) {
 }
 
 function abrirDetallesDesdePlayer() {
-    // Cerramos player (history back) y luego abrimos detalles
     history.back();
-    setTimeout(() => {
-        if (currentAnimeSlug) cargarDetallesAnime(currentAnimeSlug);
-    }, 200);
+    setTimeout(() => { if (currentAnimeSlug) cargarDetallesAnime(currentAnimeSlug); }, 200);
 }
 
-function cerrarReproductor() {
-    history.back();
-}
+function cerrarReproductor() { history.back(); }
 
 // --- UTILS ---
 function renderHistorial() {
