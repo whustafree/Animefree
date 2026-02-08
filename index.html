@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Whustaf TV</title>
+    <meta name="referrer" content="no-referrer">
+    <title>Whustaf Anime</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#141414">
@@ -13,14 +14,15 @@
     <header class="app-header">
         <div class="logo">WHUSTAF<span>TV</span></div>
         <div class="header-controls">
-            <div class="search-icon focusable" tabindex="0" onclick="toggleSearch()" onkeydown="handleEnter(event, toggleSearch)">🔍</div>
+            <button id="btn-install" class="install-btn focusable" style="display:none;">⬇ Instalar App</button>
+            <div class="search-icon focusable" tabindex="0" onclick="toggleSearch()">🔍</div>
         </div>
     </header>
 
     <div id="searchContainer" class="search-overlay">
-        <input type="text" id="inp" class="focusable" placeholder="Escribe y pulsa Enter..." onkeyup="if(event.key === 'Enter') buscar()">
+        <input type="text" id="inp" class="focusable" placeholder="Buscar anime..." onkeyup="if(event.key === 'Enter') buscar()">
         <button class="focusable" onclick="buscar()">Buscar</button>
-        <button class="close-search focusable" onclick="toggleSearch()">Cerrar</button>
+        <button class="close-search focusable" onclick="toggleSearch()">✕</button>
     </div>
 
     <main>
@@ -57,7 +59,6 @@
                     </div>
                 </div>
             </div>
-            <h3 class="episodes-title">Lista de Episodios</h3>
             <div id="det-episodes" class="episodes-grid"></div>
         </div>
     </div>
@@ -69,8 +70,8 @@
                 <h3 id="player-title"></h3>
                 <div class="server-list" id="server-list"></div>
                 <div class="player-actions">
-                    <button class="control-btn focusable" onclick="abrirDetallesDesdePlayer()">📺 Ver más capítulos</button>
-                    <button class="control-btn focusable" onclick="cerrarReproductor()">✕ Cerrar Video</button>
+                    <button class="control-btn focusable" onclick="abrirDetallesDesdePlayer()">📺 Ver capítulos</button>
+                    <button class="control-btn focusable" onclick="cerrarReproductor()">✕ Cerrar</button>
                 </div>
             </div>
         </div>
@@ -85,11 +86,6 @@
     <script src="app.js"></script>
     <script>
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-        
-        // Soporte básico para teclas de TV (Enter) en elementos enfocados
-        function handleEnter(e, callback) {
-            if (e.key === 'Enter') callback();
-        }
     </script>
 </body>
 </html>
