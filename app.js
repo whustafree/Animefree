@@ -1,15 +1,10 @@
 // ==========================================
-// CONFIGURACIÓN: JIKAN + VIDEO FINDER
+// INTEGRACIÓN: API ANIMEFLV (Ahmed Rangel)
 // ==========================================
 
-const JIKAN_API = "https://api.jikan.moe/v4";
-const VIDEO_APIS = [
-    "https://animetize-api.vercel.app/anime/animeflv",
-    "https://consumet-api-clone.vercel.app/anime/animeflv",
-    "https://api.consumet.org/anime/animeflv"
-];
+const API_BASE = "https://animeflv.ahmedrangel.com/api";
 
-// Log System
+// Consola de depuración (Mantenemos tu herramienta)
 const consoleDiv = document.getElementById('debug-console');
 function log(msg, type = 'info') {
     if(!consoleDiv) return;
@@ -24,27 +19,68 @@ function log(msg, type = 'info') {
 }
 
 // ==========================================
-// 1. CARGA DE CATÁLOGO (JIKAN)
+// SISTEMA DE CONEXIÓN (Directo + Proxies)
+// ==========================================
+
+const PROXIES = [
+    (url) => url, // 1. Intento directo (Más rápido)
+    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, // 2. Respaldo
+    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}` // 3. Emergencia
+];
+
+async function fetchData(endpoint) {
+    const targetUrl = `${API_BASE}${endpoint}`;
+    
+    for (const wrapProxy of PROXIES) {
+        try {
+            const finalUrl = wrapProxy(targetUrl);
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 8000);
+
+            const resp = await fetch(finalUrl, { signal: controller.signal });
+            clearTimeout(id);
+
+            if (!resp.ok) continue;
+
+            const text = await resp.text();
+            let data;
+            
+            try {
+                data = JSON.parse(text);
+                if(data.contents) data = JSON.parse(data.contents); // AllOrigins fix
+            } catch(e) { continue; }
+
+            if (data.success) {
+                return data.data;
+            }
+        } catch (e) { }
+    }
+    log(`Error conectando a: ${endpoint}`, 'error');
+    return null;
+}
+
+// ==========================================
+// 1. INICIO (Últimos Episodios)
 // ==========================================
 
 async function init() {
-    log("Iniciando Jikan...");
+    log("Conectando a API Ahmed Rangel...");
     const grid = document.getElementById('grid');
-    if(grid) grid.innerHTML = '<div class="loader">Cargando temporada...</div>';
+    if(grid) grid.innerHTML = '<div class="loader">Cargando últimos episodios...</div>';
 
-    try {
-        const response = await fetch(`${JIKAN_API}/seasons/now?limit=20`);
-        const data = await response.json();
-        
-        if (data && data.data) {
-            renderGrid(data.data);
-            log("Cartelera lista.", 'success');
-        }
-    } catch (e) {
-        log(`Error Jikan: ${e.message}`, 'error');
-        if(grid) grid.innerHTML = '<div style="text-align:center; padding:20px;">Error de conexión con Jikan API.</div>';
+    const data = await fetchData('/list/latest-episodes');
+    
+    if (data) {
+        renderGrid(data, 'episode'); // 'episode' indica que al hacer click vamos directo al video
+        log("Cartelera actualizada.", 'success');
+    } else {
+        if(grid) grid.innerHTML = '<div style="text-align:center;">Error de conexión.</div>';
     }
 }
+
+// ==========================================
+// 2. BÚSQUEDA (Por Anime)
+// ==========================================
 
 async function buscar() {
     const q = document.getElementById('inp').value;
@@ -52,135 +88,124 @@ async function buscar() {
     
     log(`Buscando: ${q}`);
     const grid = document.getElementById('grid');
-    grid.innerHTML = '<div class="loader">Buscando...</div>';
+    grid.innerHTML = '<div class="loader">Buscando en AnimeFLV...</div>';
 
-    try {
-        const response = await fetch(`${JIKAN_API}/anime?q=${encodeURIComponent(q)}&limit=12`);
-        const data = await response.json();
-        if (data && data.data) renderGrid(data.data);
-    } catch (e) { log("Error búsqueda", 'error'); }
+    const data = await fetchData(`/search?query=${encodeURIComponent(q)}`);
+    
+    if (data && data.media) {
+        renderGrid(data.media, 'anime'); // 'anime' indica que al hacer click vamos a detalles
+    } else {
+        grid.innerHTML = '<div style="text-align:center;">Sin resultados.</div>';
+    }
 }
 
-function renderGrid(list) {
+// Renderizado inteligente (Sirve para Episodios y Animes)
+function renderGrid(list, type) {
     const grid = document.getElementById('grid');
     grid.innerHTML = '';
     
-    list.forEach(anime => {
+    list.forEach(item => {
         const card = document.createElement('div');
         card.className = 'anime-card';
-        const img = anime.images.jpg.image_url;
+        
+        // La API devuelve 'cover' para la imagen
+        const img = item.cover || 'https://via.placeholder.com/150';
+        const title = item.title;
+        // Si es episodio, mostramos número. Si es anime, mostramos tipo/rating
+        const subtitle = item.number ? `Episodio ${item.number}` : (item.type || 'Anime');
         
         card.innerHTML = `
             <img src="${img}" loading="lazy">
-            <div class="info">${anime.title}</div>
+            <div class="info">
+                <strong>${title}</strong><br>
+                <small>${subtitle}</small>
+            </div>
         `;
-        // Pasamos el título para buscar el video
-        card.onclick = () => prepararVideo(anime.title);
+        
+        // Lógica de click según el tipo
+        if (type === 'episode') {
+            // Si es un episodio de la home, vamos directo a verlo
+            card.onclick = () => cargarVideo(item.slug, item.title);
+        } else {
+            // Si es una búsqueda de anime, vamos a ver sus capítulos
+            card.onclick = () => cargarDetallesAnime(item.slug);
+        }
+        
         grid.appendChild(card);
     });
 }
 
 // ==========================================
-// 2. BUSCADOR DE VIDEO (VIDEO LINKER)
+// 3. DETALLES DEL ANIME
 // ==========================================
 
-async function prepararVideo(titulo) {
+async function cargarDetallesAnime(slug) {
     const modal = document.getElementById('modal');
     modal.style.display = 'flex';
-    document.getElementById('mTitle').innerText = titulo; // Título temporal
-    document.getElementById('mEps').innerHTML = '<div style="text-align:center; padding:20px;">Conectando a servidores de video...</div>';
+    document.getElementById('mTitle').innerText = "Cargando info...";
+    document.getElementById('mEps').innerHTML = '<div class="loader">Obteniendo episodios...</div>';
     document.getElementById('mLinks').innerHTML = '';
 
-    log(`Buscando video para: ${titulo}...`, 'warn');
-
-    // Buscamos en los servidores de video usando el título de Jikan
-    const animeData = await encontrarAnimeEnServidores(titulo);
+    const info = await fetchData(`/anime/${slug}`);
     
-    if (animeData) {
-        log("¡Video encontrado!", 'success');
-        document.getElementById('mTitle').innerText = animeData.title; // Ponemos el título real del servidor
-        mostrarEpisodios(animeData);
-    } else {
-        log("No hay stream disponible.", 'error');
-        document.getElementById('mEps').innerHTML = 
-            '<div style="text-align:center; padding:20px;">Este anime está en la base de datos pero no tiene videos disponibles en los servidores gratuitos actualmente.</div>';
-    }
-}
-
-async function encontrarAnimeEnServidores(query) {
-    // Limpiamos el título para mejorar la búsqueda (quitamos (TV), 2nd Season, etc)
-    const cleanQuery = query.replace(/\(TV\)|\(Movie\)|Season|Part \d/gi, "").trim();
-
-    for (const server of VIDEO_APIS) {
-        // Usamos proxy AllOrigins para buscar
-        const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(`${server}/${cleanQuery}`)}`;
-        try {
-            const resp = await fetch(url);
-            const data = await resp.json();
-            
-            let results = data.results || (data.contents ? JSON.parse(data.contents).results : []);
-            
-            if (results && results.length > 0) {
-                // Si encontramos algo, pedimos la info completa del primer resultado
-                return await infoCompletaAnime(server, results[0].id);
-            }
-        } catch (e) { console.log("Skip server"); }
-    }
-    return null;
-}
-
-async function infoCompletaAnime(serverBase, animeId) {
-    const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(`${serverBase}/info?id=${animeId}`)}`;
-    try {
-        const r = await fetch(url);
-        const d = await r.json();
-        return d.contents ? JSON.parse(d.contents) : d;
-    } catch (e) { return null; }
-}
-
-function mostrarEpisodios(data) {
-    const list = document.getElementById('mEps');
-    list.innerHTML = '';
-    
-    if (data.episodes) {
-        // Invertimos para mostrar últimos caps primero o no, a gusto
-        data.episodes.forEach(ep => {
-            const btn = document.createElement('div');
-            btn.className = 'ep-btn';
-            btn.innerText = ep.number;
-            btn.onclick = () => cargarLinkVideo(data.id, ep.id);
-            list.appendChild(btn);
-        });
-    }
-}
-
-async function cargarLinkVideo(animeId, epId) {
-    document.getElementById('mLinks').innerHTML = '<div style="text-align:center;">Extrayendo video...</div>';
-    
-    const server = VIDEO_APIS[0]; // Usamos el primero por defecto
-    const url = `https://api.allorigins.win/raw?url=${encodeURIComponent(`${server}/watch?episodeId=${epId}`)}`;
-
-    try {
-        const resp = await fetch(url);
-        const json = await resp.json();
-        const data = json.contents ? JSON.parse(json.contents) : json;
-
-        const linksDiv = document.getElementById('mLinks');
-        linksDiv.innerHTML = '';
-
-        if (data.sources) {
-            data.sources.forEach(src => {
-                const btn = document.createElement('a');
-                btn.className = 'link-btn';
-                btn.innerText = `▶ Ver ${src.quality}`;
-                btn.href = src.url;
-                linksDiv.appendChild(btn);
+    if (info) {
+        document.getElementById('mTitle').innerText = info.title;
+        const list = document.getElementById('mEps');
+        list.innerHTML = '';
+        
+        // Mostrar episodios
+        if (info.episodes && info.episodes.length > 0) {
+            info.episodes.forEach(ep => {
+                const btn = document.createElement('div');
+                btn.className = 'ep-btn';
+                btn.innerText = ep.number;
+                // El slug del episodio ya viene listo en esta API
+                btn.onclick = () => cargarVideo(ep.slug, `Episodio ${ep.number}`);
+                list.appendChild(btn);
             });
+            log(`Cargados ${info.episodes.length} capítulos.`, 'success');
         } else {
-            linksDiv.innerHTML = 'Sin enlaces.';
+            list.innerHTML = 'No hay episodios listados.';
         }
-    } catch (e) {
-        document.getElementById('mLinks').innerText = 'Error de video.';
+    }
+}
+
+// ==========================================
+// 4. REPRODUCTOR DE VIDEO
+// ==========================================
+
+async function cargarVideo(episodeSlug, titleContext) {
+    // Si estamos en la home, abrimos el modal primero
+    const modal = document.getElementById('modal');
+    if (modal.style.display !== 'flex') {
+        modal.style.display = 'flex';
+        document.getElementById('mTitle').innerText = titleContext;
+        document.getElementById('mEps').innerHTML = ''; // Limpiamos lista de caps si venimos de home
+    }
+
+    const linksDiv = document.getElementById('mLinks');
+    linksDiv.innerHTML = '<div class="loader">Extrayendo servidores...</div>';
+    
+    log(`Obteniendo video: ${episodeSlug}`);
+    const data = await fetchData(`/anime/episode/${episodeSlug}`);
+
+    linksDiv.innerHTML = '';
+    
+    if (data && data.servers) {
+        data.servers.forEach(server => {
+            const btn = document.createElement('button');
+            btn.className = 'link-btn'; // Usamos la clase del CSS
+            btn.innerText = `▶ Ver en ${server.name}`;
+            
+            // Preferimos la URL de 'embed' o 'url', según lo que traiga
+            const videoUrl = server.embed || server.url || server.code;
+            
+            btn.onclick = () => window.location.href = videoUrl;
+            linksDiv.appendChild(btn);
+        });
+        log("Servidores listos.", 'success');
+    } else {
+        linksDiv.innerHTML = '<div style="text-align:center;">No hay servidores disponibles.</div>';
     }
 }
 
