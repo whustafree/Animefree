@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Whustaf TV</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="tv-body">
+
+    <nav class="tv-navbar">
+        <div class="tv-logo">WHUSTAF<span>TV</span></div>
+        <div class="tv-menu-items">
+            <button onclick="tvTab('home')" class="tv-link focusable active" id="tv-home">Inicio</button>
+            <button onclick="tvTab('search')" class="tv-link focusable">Buscar</button>
+            <button onclick="tvTab('favorites')" class="tv-link focusable">Mi Lista</button>
+            <button onclick="tvTab('history')" class="tv-link focusable">Historial</button>
+        </div>
+    </nav>
+
+    <div id="view-home" class="tv-view active">
+        <div class="hero-section">
+            <div id="hero-bg" class="hero-bg"></div>
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <span class="hero-badge">ESTRENO</span>
+                <h1 id="hero-title">Cargando...</h1>
+                <p id="hero-desc">...</p>
+                <div class="hero-actions">
+                    <button id="hero-play" class="hero-btn primary focusable">▶ Reproducir</button>
+                    <button id="hero-info" class="hero-btn secondary focusable">Más Info</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tv-rows">
+            <div class="tv-row-title">🔥 Estrenos Recientes</div>
+            <div id="row-latest" class="tv-row-container horizontal-scroll"></div>
+            
+            <div class="tv-row-title">❤️ Tu Lista</div>
+            <div id="row-favs" class="tv-row-container horizontal-scroll"></div>
+        </div>
+    </div>
+
+    <div id="view-search" class="tv-view">
+        <div class="tv-search-header">
+            <input type="text" id="tv-search-input" class="tv-input focusable" placeholder="Escribe para buscar...">
+            <button onclick="tvBuscar()" class="hero-btn secondary focusable">Buscar</button>
+        </div>
+        <div id="tv-search-results" class="tv-grid-results"></div>
+    </div>
+
+    <div id="view-favorites" class="tv-view">
+        <h2 class="tv-page-title">Mi Lista</h2>
+        <div id="tv-favorites-grid" class="tv-grid-results"></div>
+    </div>
+
+    <div id="view-history" class="tv-view">
+        <h2 class="tv-page-title">Historial</h2>
+        <div id="tv-history-grid" class="tv-grid-results"></div>
+    </div>
+
+    <div id="tv-details-modal" class="tv-modal">
+        <div class="tv-modal-content">
+            <div class="tv-modal-left">
+                <img id="tv-det-img" src="">
+            </div>
+            <div class="tv-modal-right">
+                <h1 id="tv-det-title">...</h1>
+                <p id="tv-det-desc">...</p>
+                <div class="hero-actions">
+                    <button id="tv-btn-play" class="hero-btn primary focusable">▶ Ver</button>
+                    <button id="tv-btn-fav" class="hero-btn secondary focusable">Fav</button>
+                    <button onclick="closeTvDetails()" class="hero-btn secondary focusable">Cerrar</button>
+                </div>
+                <h3>Episodios</h3>
+                <div id="tv-episodes-list" class="tv-episodes-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tv-player" class="tv-player-overlay">
+        <div id="tv-video-container" style="width:100%; height:100%;"></div>
+        <button onclick="closeTvPlayer()" class="tv-close-player focusable">✕</button>
+    </div>
+
+    <script src="app_tv.js"></script>
+</body>
+</html>
