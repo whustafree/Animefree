@@ -1,4 +1,6 @@
-const CACHE_NAME = 'animofree-v11-jikan';
+// Aumenta el número para forzar la actualización
+const CACHE_NAME = 'animofree-v12-ahmed'; 
+
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +9,7 @@ const ASSETS = [
   './manifest.json'
 ];
 
+// ... (Resto del código del Service Worker igual que siempre)
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -28,8 +31,9 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('api') || event.request.url.includes('vercel')) {
-    return; // No cachear APIs
+  // Ignoramos caché para las APIs nuevas para tener siempre lo último
+  if (event.request.url.includes('ahmedrangel') || event.request.url.includes('api')) {
+    return;
   }
   event.respondWith(
     caches.match(event.request).then((response) => response || fetch(event.request))
