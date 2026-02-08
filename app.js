@@ -1,80 +1,149 @@
-// LISTA DE SERVIDORES (Mirrors de la API)
-// Si uno se cae, el sistema probará el siguiente automáticamente.
-const API_MIRRORS = [
+// ==========================================
+// MODO FORENSE: DIAGNÓSTICO DE RED
+// ==========================================
+
+const consoleDiv = document.createElement('div');
+consoleDiv.id = 'debug-console';
+consoleDiv.style.cssText = `
+    position: fixed; bottom: 0; left: 0; width: 100%; height: 250px;
+    background: #000; color: #0f0; font-family: monospace; font-size: 10px;
+    overflow-y: scroll; z-index: 9999; border-top: 2px solid #ff4500;
+    padding: 10px; box-sizing: border-box; opacity: 0.95;
+`;
+document.body.appendChild(consoleDiv);
+
+function log(msg, type = 'info') {
+    const p = document.createElement('p');
+    p.style.margin = "2px 0";
+    p.style.borderBottom = "1px solid #333";
+    
+    const time = new Date().toLocaleTimeString();
+    
+    if (type === 'error') { p.style.color = '#ff5555'; p.style.fontWeight = 'bold'; }
+    else if (type === 'success') { p.style.color = '#55ff55'; p.style.fontWeight = 'bold'; }
+    else if (type === 'warn') { p.style.color = '#ffff55'; }
+    else { p.style.color = '#00d4ff'; }
+
+    p.innerText = `[${time}] ${msg}`;
+    consoleDiv.appendChild(p);
+    consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    console.log(`[${type}] ${msg}`);
+}
+
+// ==========================================
+// CONFIGURACIÓN DE APIS Y PROXIES
+// ==========================================
+
+// Lista de APIs a probar
+const APIS = [
     "https://animetize-api.vercel.app/anime/animeflv",
     "https://consumet-api-clone.vercel.app/anime/animeflv",
-    "https://api.consumet.org/anime/animeflv",
-    "https://consumet-jade.vercel.app/anime/animeflv"
+    "https://api.consumet.org/anime/animeflv"
 ];
 
-// LISTA DE PROXIES (Para saltar bloqueos CORS)
+// Lista de Proxies para envolver la petición
 const PROXIES = [
-    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    (url) => `https://thingproxy.freeboard.io/fetch/${url}`
+    { name: "Directo (Sin Proxy)", url: (u) => u },
+    { name: "AllOrigins", url: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+    { name: "CorsProxy", url: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}` }
 ];
 
-// Función maestra para obtener datos (Intento múltiple)
+// ==========================================
+// LÓGICA DE CONEXIÓN
+// ==========================================
+
 async function fetchData(endpoint) {
-    // 1. Probamos cada servidor de la lista
-    for (const baseUrl of API_MIRRORS) {
-        const targetUrl = `${baseUrl}/${endpoint}`;
+    log(`--- INICIANDO BÚSQUEDA: ${endpoint} ---`, 'warn');
+
+    for (const apiBase of APIS) {
+        const targetUrl = `${apiBase}/${endpoint}`;
         
-        // 2. Para cada servidor, probamos rotando proxies
-        for (const wrapProxy of PROXIES) {
+        for (const proxy of PROXIES) {
+            const finalUrl = proxy.url(targetUrl);
+            const host = new URL(apiBase).hostname;
+            
+            log(`Probando: ${host} | Vía: ${proxy.name}`);
+            log(`URL: ${finalUrl.substring(0, 50)}...`, 'info');
+
             try {
-                const finalUrl = wrapProxy(targetUrl);
-                console.log(`Probando conexión: ${new URL(baseUrl).hostname} vía proxy...`);
-
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 seg límite
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-                const response = await fetch(finalUrl, { 
+                const response = await fetch(finalUrl, {
                     signal: controller.signal,
-                    referrerPolicy: "no-referrer" // Importante para privacidad
+                    referrerPolicy: "no-referrer"
                 });
                 
                 clearTimeout(timeoutId);
 
-                if (!response.ok) continue;
+                // 1. Diagnóstico de Estado HTTP
+                log(`Status HTTP: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    log(`❌ Falló con status ${response.status}. Saltando...`, 'error');
+                    continue;
+                }
 
-                const textData = await response.text();
+                // 2. Diagnóstico de Contenido (Texto Crudo)
+                const rawText = await response.text();
+                const preview = rawText.substring(0, 100).replace(/\n/g, ""); // Ver primeros 100 caracteres
+                
+                log(`📦 Recibido (Inicio): ${preview}`);
+
+                // 3. Detección de Errores Comunes
+                if (rawText.includes("<!DOCTYPE html>") || rawText.includes("<html")) {
+                    log(`❌ ERROR: Recibimos HTML en lugar de JSON. (Posible bloqueo de Cloudflare o Error 404/500 disfrazado).`, 'error');
+                    continue;
+                }
+
+                // 4. Intento de Parseo JSON
                 let data;
-
-                // Intentamos parsear el JSON (A veces el proxy lo envuelve)
                 try {
-                    const json = JSON.parse(textData);
-                    data = json.contents ? JSON.parse(json.contents) : json;
-                } catch(e) {
-                    data = JSON.parse(textData); // Intento directo
+                    data = JSON.parse(rawText);
+                    
+                    // Manejo especial para AllOrigins que a veces envuelve en 'contents'
+                    if (data.contents) {
+                        log(`ℹ️ Desempaquetando respuesta de AllOrigins...`);
+                        data = JSON.parse(data.contents);
+                    }
+                    
+                    log(`✅ JSON Válido. Objetos: ${Object.keys(data).join(", ")}`, 'success');
+
+                } catch (jsonError) {
+                    log(`❌ Error de Sintaxis JSON: ${jsonError.message}`, 'error');
+                    continue;
                 }
 
-                // Verificamos si la data sirve
+                // 5. Verificación final de datos útiles
                 if (data.results || data.episodes || data.sources) {
-                    console.log("¡Conexión Exitosa!");
+                    log(`🏆 ¡ÉXITO! Datos encontrados.`, 'success');
                     return data;
+                } else {
+                    log(`⚠️ JSON válido pero sin datos esperados.`, 'warn');
                 }
 
-            } catch (e) {
-                console.warn(`Fallo ${baseUrl}:`, e.message);
-                // Si falla, el bucle continúa con el siguiente proxy/servidor
+            } catch (networkError) {
+                log(`💀 Error de Red/Fetch: ${networkError.message}`, 'error');
             }
+            
+            log(`-----------------------------------`);
         }
     }
-    
-    // Si llegamos aquí, todo falló
-    document.getElementById('animeGrid').innerHTML = 
-        '<div style="text-align:center; padding:20px; color:#ff5555;">⚠️ Error: Todos los servidores están ocupados.<br>Intenta de nuevo en 1 minuto.</div>';
+
+    log(`⛔ FATAL: Se probaron todas las combinaciones y ninguna funcionó.`, 'error');
+    document.getElementById('animeGrid').innerHTML = '<div style="padding:20px; text-align:center; color:red;">Revisa la consola abajo para ver el error exacto.</div>';
     return null;
 }
 
-// --- LÓGICA DE LA INTERFAZ (Igual que antes) ---
+// ==========================================
+// FUNCIONES DE INTERFAZ (UI)
+// ==========================================
 
 window.onload = () => cargarInicio();
 
 async function cargarInicio() {
     const grid = document.getElementById('animeGrid');
-    grid.innerHTML = '<div class="loader" style="grid-column: 1/-1; text-align:center;">Buscando servidor activo...</div>';
+    if(grid) grid.innerHTML = '<div class="loader">Iniciando diagnóstico...</div>';
     
     const data = await fetchData("recent-episodes");
     if (data && data.results) renderGrid(data.results);
@@ -83,13 +152,11 @@ async function cargarInicio() {
 async function buscarAnime() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) return;
-
     const grid = document.getElementById('animeGrid');
-    grid.innerHTML = '<div class="loader" style="grid-column: 1/-1; text-align:center;">Buscando...</div>';
+    grid.innerHTML = '<div class="loader">Buscando...</div>';
     
     const data = await fetchData(query);
     if (data && data.results) renderGrid(data.results);
-    else if (grid.innerHTML.includes("loader")) grid.innerHTML = '<div style="padding:20px; text-align:center;">Sin resultados.</div>';
 }
 
 function renderGrid(list) {
@@ -99,7 +166,6 @@ function renderGrid(list) {
     list.forEach(anime => {
         const card = document.createElement('div');
         card.className = 'anime-card';
-        // Proxy de imágenes Weserv
         const img = `https://images.weserv.nl/?url=${encodeURIComponent(anime.image)}`;
         
         card.innerHTML = `
@@ -111,46 +177,45 @@ function renderGrid(list) {
     });
 }
 
+// Funciones del Modal y Video (Simplificadas para diagnóstico)
 async function abrirDetalles(id, title) {
     const modal = document.getElementById('animeModal');
     modal.style.display = 'flex';
     document.getElementById('modalTitle').innerText = title;
     
-    const list = document.getElementById('modalEpisodes');
-    list.innerHTML = 'Cargando info...';
-    document.getElementById('modalLinks').innerHTML = '';
-
+    const epList = document.getElementById('modalEpisodes');
+    epList.innerHTML = 'Consultando API...';
+    
     const data = await fetchData(`info?id=${id}`);
     
     if (data && data.episodes) {
-        list.innerHTML = '';
+        epList.innerHTML = '';
         data.episodes.reverse().forEach(ep => {
             const btn = document.createElement('div');
             btn.className = 'ep-btn';
             btn.innerText = ep.number;
             btn.onclick = () => cargarLinks(ep.id);
-            list.appendChild(btn);
+            epList.appendChild(btn);
         });
     }
 }
 
 async function cargarLinks(epId) {
     const linksDiv = document.getElementById('modalLinks');
-    linksDiv.innerHTML = '<div style="text-align:center;">Buscando video...</div>';
-    
+    linksDiv.innerHTML = 'Buscando video...';
     const data = await fetchData(`watch?episodeId=${epId}`);
+    
     linksDiv.innerHTML = '';
-
     if (data && data.sources) {
         data.sources.forEach(src => {
             const btn = document.createElement('a');
             btn.className = 'link-btn';
-            btn.innerText = `▶ Ver en ${src.quality}`;
+            btn.innerText = `▶ ${src.quality}`;
             btn.href = src.url;
             linksDiv.appendChild(btn);
         });
     } else {
-        linksDiv.innerHTML = 'No se encontraron videos.';
+        linksDiv.innerHTML = 'Sin video.';
     }
 }
 
