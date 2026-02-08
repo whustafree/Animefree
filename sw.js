@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animofree-v28-rescue';
+const CACHE_NAME = 'animofree-v29-ultimate';
 const ASSETS = [
   './',
   './index.html',
