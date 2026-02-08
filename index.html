@@ -10,18 +10,14 @@
         .search-box { display: flex; gap: 5px; margin: 15px 0; }
         input { flex: 1; padding: 12px; background: #222; border: 1px solid #333; color: #fff; border-radius: 5px; }
         button { background: var(--main); border: none; padding: 10px; color: white; border-radius: 5px; }
-        
         .anime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
         .anime-card { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid #333; }
         .anime-card img { width: 100%; height: 180px; object-fit: cover; }
         .anime-card div { padding: 8px; font-size: 0.8rem; text-align: center; height: 35px; overflow: hidden; }
-
         #debug-console { position: fixed; bottom: 0; left: 0; width: 100%; height: 100px; background: #000; color: #0f0; font-size: 10px; overflow-y: auto; border-top: 1px solid var(--main); z-index: 1000; padding: 5px; }
-        .error { color: #ff5555; }
-        
-        #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
-        .close { position: absolute; top: 20px; right: 20px; font-size: 30px; }
-        .ep-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; padding: 20px; overflow-y: auto; }
+        #modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
+        .close { position: absolute; top: 20px; right: 20px; font-size: 30px; color: var(--main); }
+        .ep-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; padding: 20px; max-height: 50vh; overflow-y: auto; }
         .ep-btn { background: #333; padding: 10px; border-radius: 4px; min-width: 40px; text-align: center; }
     </style>
 </head>
@@ -40,7 +36,7 @@
         <span class="close" onclick="this.parentElement.style.display='none'">&times;</span>
         <h3 id="mTitle"></h3>
         <div id="mEps" class="ep-list"></div>
-        <div id="mLinks" style="padding: 20px; display: flex; flex-direction: column; gap: 10px;"></div>
+        <div id="mLinks" style="padding: 20px; display: flex; flex-direction: column; gap: 10px; width: 80%;"></div>
     </div>
 
     <div id="debug-console"></div>
@@ -49,41 +45,40 @@
     const consoleDiv = document.getElementById('debug-console');
     function log(m, isErr=false) {
         const d = document.createElement('div');
-        if(isErr) d.className = 'error';
+        if(isErr) d.style.color = '#ff5555';
         d.innerText = `> ${m}`;
         consoleDiv.appendChild(d);
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 
-    // LISTA DE APIS (Si una falla, intentamos otra)
-    const APIS = [
-        "https://api.consumet.org/anime/animeflv/",
-        "https://consumet-api-production-e852.up.railway.app/anime/animeflv/"
-    ];
-    let currentApi = APIS[1]; // Usamos la de Railway que suele ser más estable
-
+    // --- EL GRAN CAMBIO: USAR UN PROXY PARA EVITAR EL "FAILED TO FETCH" ---
     async function call(path) {
-        log(`Pidiendo: ${path}`);
+        const targetUrl = `https://api.consumet.org/anime/animeflv/${path}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        
+        log(`Pidiendo: ${path}...`);
         try {
-            const r = await fetch(currentApi + path);
-            if(!r.ok) throw new Error("Status " + r.status);
-            return await r.json();
+            const r = await fetch(proxyUrl);
+            const data = await r.json();
+            // AllOrigins devuelve un objeto con la propiedad 'contents' que es un string JSON
+            const parsedData = JSON.parse(data.contents);
+            log(`Éxito en: ${path}`);
+            return parsedData;
         } catch(e) {
             log(`Fallo: ${e.message}`, true);
-            // Intento con la otra API si falla la primera
-            currentApi = APIS[0];
             return null;
         }
     }
 
     async function init() {
-        log("Cargando cartelera...");
+        log("Cargando estrenos con Proxy...");
         const data = await call("recent-episodes");
         if(data) render(data.results);
     }
 
     async function buscar() {
         const q = document.getElementById('inp').value;
+        if(!q) return;
         const data = await call(q);
         if(data) render(data.results);
     }
@@ -120,17 +115,21 @@
     }
 
     async function loadLinks(id) {
-        log(`Cargando links de ${id}...`);
+        log(`Cargando video de ${id}...`);
         const data = await call(`watch?episodeId=${id}`);
         const cont = document.getElementById('mLinks');
         cont.innerHTML = '';
-        if(data) {
+        if(data && data.sources) {
             data.sources.forEach(s => {
-                const a = document.createElement('button');
-                a.innerText = `Ver en ${s.quality}`;
-                a.style.padding = "10px";
-                a.onclick = () => window.open(s.url, '_blank');
-                cont.appendChild(a);
+                const b = document.createElement('button');
+                b.innerText = `Calidad: ${s.quality}`;
+                b.style.padding = "12px";
+                b.style.background = "#444";
+                b.style.color = "white";
+                b.style.border = "none";
+                b.style.borderRadius = "5px";
+                b.onclick = () => window.open(s.url, '_blank');
+                cont.appendChild(b);
             });
         }
     }
