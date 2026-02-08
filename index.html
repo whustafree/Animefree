@@ -3,39 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Whustaf Anime Pro</title>
+    <title>Whustaf TV</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#141414">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3504/3504827.png">
 </head>
 <body>
 
     <header class="app-header">
-        <div class="logo">WHUSTAF<span>PLAY</span></div>
-        <div class="search-icon" onclick="toggleSearch()">🔍</div>
+        <div class="logo">WHUSTAF<span>TV</span></div>
+        <div class="header-controls">
+            <div class="search-icon focusable" tabindex="0" onclick="toggleSearch()" onkeydown="handleEnter(event, toggleSearch)">🔍</div>
+        </div>
     </header>
 
     <div id="searchContainer" class="search-overlay">
-        <input type="text" id="inp" placeholder="Buscar anime..." onkeyup="if(event.key === 'Enter') buscar()">
-        <button onclick="buscar()">Ir</button>
-        <button onclick="toggleSearch()" class="close-search">✕</button>
+        <input type="text" id="inp" class="focusable" placeholder="Escribe y pulsa Enter..." onkeyup="if(event.key === 'Enter') buscar()">
+        <button class="focusable" onclick="buscar()">Buscar</button>
+        <button class="close-search focusable" onclick="toggleSearch()">Cerrar</button>
     </div>
 
     <main>
         <div id="view-home" class="view active">
-            <h2 class="section-title">🔥 Salieron Hoy</h2>
+            <h2 class="section-title">🔥 Estrenos</h2>
             <div id="grid-latest" class="grid-container">
-                <div class="loader">Cargando estrenos...</div>
+                <div class="loader">Cargando...</div>
             </div>
         </div>
 
         <div id="view-history" class="view">
             <h2 class="section-title">🕒 Continuar Viendo</h2>
-            <div id="grid-history" class="grid-container">
-                <div class="empty-msg">Aún no has visto nada.</div>
-            </div>
-            <button class="clear-history" onclick="borrarHistorial()">Borrar Historial</button>
+            <div id="grid-history" class="grid-container"></div>
+            <button class="clear-history focusable" onclick="borrarHistorial()">Borrar Historial</button>
         </div>
 
         <div id="view-search" class="view">
@@ -44,35 +43,52 @@
         </div>
     </main>
 
+    <div id="details-modal" class="full-modal">
+        <div class="modal-content">
+            <button class="close-modal-btn focusable" onclick="cerrarDetalles()">✕</button>
+            <div class="details-header">
+                <img id="det-img" src="" alt="Cover">
+                <div class="details-info">
+                    <h1 id="det-title">Título</h1>
+                    <div class="badges" id="det-genres"></div>
+                    <p id="det-synopsis">Sinopsis...</p>
+                    <div class="action-buttons">
+                        <button id="btn-play-latest" class="primary-btn focusable">▶ Reproducir</button>
+                    </div>
+                </div>
+            </div>
+            <h3 class="episodes-title">Lista de Episodios</h3>
+            <div id="det-episodes" class="episodes-grid"></div>
+        </div>
+    </div>
+
     <div id="player-modal" class="player-modal">
         <div class="video-container">
             <div id="video-wrapper"></div>
-            
             <div class="player-controls">
-                <h3 id="player-title">Título del Anime</h3>
-                <div class="server-list" id="server-list">Cargando servidores...</div>
-                <button class="close-player" onclick="cerrarReproductor()">Cerrar Video</button>
-                <small style="color:#aaa; display:block; margin-top:5px;">Si el video no carga, prueba otro servidor.</small>
+                <h3 id="player-title"></h3>
+                <div class="server-list" id="server-list"></div>
+                <div class="player-actions">
+                    <button class="control-btn focusable" onclick="abrirDetallesDesdePlayer()">📺 Ver más capítulos</button>
+                    <button class="control-btn focusable" onclick="cerrarReproductor()">✕ Cerrar Video</button>
+                </div>
             </div>
         </div>
     </div>
 
     <nav class="bottom-nav">
-        <button onclick="cambiarVista('home')" class="nav-btn active" id="btn-home">
-            <span class="icon">🏠</span> Inicio
-        </button>
-        <button onclick="cambiarVista('history')" class="nav-btn" id="btn-history">
-            <span class="icon">🕒</span> Historial
-        </button>
-        <button onclick="recargar()" class="nav-btn">
-            <span class="icon">🔄</span> Refrescar
-        </button>
+        <button onclick="cambiarVista('home')" class="nav-btn focusable active" id="btn-home" tabindex="0">🏠 Inicio</button>
+        <button onclick="cambiarVista('history')" class="nav-btn focusable" id="btn-history" tabindex="0">🕒 Historial</button>
+        <button onclick="recargar()" class="nav-btn focusable" tabindex="0">🔄 Refrescar</button>
     </nav>
 
     <script src="app.js"></script>
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(console.error);
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+        
+        // Soporte básico para teclas de TV (Enter) en elementos enfocados
+        function handleEnter(e, callback) {
+            if (e.key === 'Enter') callback();
         }
     </script>
 </body>
