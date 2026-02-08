@@ -186,3 +186,38 @@ body {
     outline: 4px solid white;
     transform: scale(1.05); z-index: 10;
 }
+/* ... MANTENER TODO TU CSS ANTERIOR y AGREGAR ESTO AL FINAL ... */
+
+/* GÉNEROS DESLIZABLES */
+.genre-scroll {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px 0;
+    margin-top: 5px;
+    scrollbar-width: none; /* Ocultar barra scroll Firefox */
+}
+.genre-scroll::-webkit-scrollbar { display: none; /* Ocultar barra scroll Chrome */ }
+
+.genre-chip {
+    background: #333;
+    color: #ccc;
+    border: 1px solid #444;
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.genre-chip:hover, .genre-chip.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* Ajuste del header de búsqueda para acomodar los géneros */
+.search-header-fixed {
+    height: auto; /* Dejar crecer para los géneros */
+    min-height: 110px;
+}
