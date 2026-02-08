@@ -1,12 +1,11 @@
 const consoleDiv = document.getElementById('debug-console');
 
-// Sistema de Log Avanzado
+// --- SISTEMA DE LOGS DETALLADO ---
 function log(msg, type = 'info') {
     const d = document.createElement('div');
     d.style.marginBottom = "3px";
     d.style.borderLeft = "3px solid";
     d.style.paddingLeft = "5px";
-    
     const time = new Date().toLocaleTimeString();
     
     switch(type) {
@@ -30,69 +29,68 @@ function log(msg, type = 'info') {
     d.innerText = `[${time}] ${msg}`;
     consoleDiv.appendChild(d);
     consoleDiv.scrollTop = consoleDiv.scrollHeight;
-    console.log(`[${type.toUpperCase()}] ${msg}`);
 }
 
-// Función de llamada con detalles técnicos
+// --- FUNCIÓN DE LLAMADA CON ROTACIÓN DE PROXIES (ANTI-CORS) ---
 async function call(path) {
     const targetUrl = `https://api.consumet.org/anime/animeflv/${path}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
     
+    // Lista de proxies para intentar saltar el bloqueo de GitHub Pages
+    const proxies = [
+        `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+        `https://thingproxy.freeboard.io/fetch/${targetUrl}`
+    ];
+
     log(`Iniciando petición a: /${path}`, 'warn');
 
-    try {
-        const startTime = performance.now();
-        const response = await fetch(proxyUrl);
-        const endTime = performance.now();
-
-        if (!response.ok) {
-            throw new Error(`HTTP Error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        log(`Respuesta recibida en ${Math.round(endTime - startTime)}ms`, 'info');
-
-        if (!data.contents) {
-            throw new Error("El Proxy no devolvió contenidos (contents es nulo)");
-        }
-
-        // Intentar parsear el contenido de la API
+    for (const proxyUrl of proxies) {
         try {
-            const parsedData = JSON.parse(data.contents);
-            log(`JSON parseado correctamente. Items: ${parsedData.results?.length || 'N/A'}`, 'success');
-            return parsedData;
-        } catch (parseError) {
-            log(`ERROR DE PARSEO: El contenido recibido no es un JSON válido.`, 'error');
-            log(`Respuesta cruda: ${data.contents.substring(0, 100)}...`, 'warn');
-            return null;
-        }
+            const host = new URL(proxyUrl).hostname;
+            log(`Probando proxy: ${host}...`, 'info');
+            
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    } catch (error) {
-        log(`ERROR DE RED/PROXY: ${error.message}`, 'error');
-        return null;
+            const textData = await response.text();
+            let finalData;
+
+            // AllOrigins devuelve un objeto con .contents, otros el JSON directo
+            try {
+                const json = JSON.parse(textData);
+                finalData = json.contents ? JSON.parse(json.contents) : json;
+            } catch (e) {
+                // Si falla el primer parseo, intentamos el texto directo
+                finalData = JSON.parse(textData);
+            }
+
+            log(`¡Éxito con ${host}!`, 'success');
+            return finalData;
+
+        } catch (error) {
+            log(`Fallo proxy ${new URL(proxyUrl).hostname}: ${error.message}`, 'error');
+            // Continúa al siguiente proxy en el bucle
+        }
     }
+
+    log("TODOS LOS PROXIES FALLARON. La API podría estar caída.", "error");
+    return null;
 }
 
-// --- LÓGICA DE LA INTERFAZ ---
+// --- LÓGICA DE RENDERIZADO Y CONTROL ---
 
 async function init() {
     log("Cargando cartelera de estrenos...", "info");
     const data = await call("recent-episodes");
     if (data && data.results) {
         render(data.results);
-    } else {
-        log("No se pudieron cargar los estrenos.", "error");
     }
 }
 
 async function buscar() {
     const q = document.getElementById('inp').value;
-    if (!q) {
-        log("Búsqueda vacía abortada", "warn");
-        return;
-    }
-    log(`Buscando anime: "${q}"`, "info");
+    if (!q) return log("Ingresa un nombre para buscar", "warn");
+    log(`Buscando: "${q}"`, "info");
     const data = await call(q);
     if (data && data.results) {
         render(data.results);
@@ -102,22 +100,29 @@ async function buscar() {
 function render(list) {
     const g = document.getElementById('grid');
     g.innerHTML = '';
-    if (list.length === 0) {
-        log("La búsqueda no devolvió resultados.", "warn");
-        g.innerHTML = '<div style="padding:20px">No se encontraron resultados.</div>';
+    
+    if (!list || list.length === 0) {
+        log("No hay resultados para mostrar", "warn");
         return;
     }
+
     list.forEach(a => {
         const c = document.createElement('div');
         c.className = 'anime-card';
-        c.innerHTML = `<img src="${a.image}" loading="lazy"><div>${a.title}</div>`;
+        // Usamos images.weserv.nl para evitar bloqueos de imágenes (Hotlinking)
+        const proxyImg = `https://images.weserv.nl/?url=${encodeURIComponent(a.image)}`;
+        
+        c.innerHTML = `
+            <img src="${proxyImg}" loading="lazy" onerror="this.src='https://via.placeholder.com/140x200?text=No+Image'">
+            <div>${a.title}</div>
+        `;
         c.onclick = () => loadAnime(a.id, a.title);
         g.appendChild(c);
     });
 }
 
 async function loadAnime(id, title) {
-    log(`Abriendo detalles de: ${title}`, "info");
+    log(`Abriendo: ${title}`, "info");
     document.getElementById('modal').style.display = 'flex';
     document.getElementById('mTitle').innerText = title;
     document.getElementById('mEps').innerHTML = 'Cargando episodios...';
@@ -134,15 +139,15 @@ async function loadAnime(id, title) {
             b.onclick = () => loadLinks(e.id);
             container.appendChild(b);
         });
-        log(`${data.episodes.length} episodios cargados.`, "success");
+        log(`${data.episodes.length} episodios encontrados.`, "success");
     }
 }
 
 async function loadLinks(id) {
-    log(`Buscando servidores para el episodio: ${id}`, "info");
+    log(`Buscando video para ep: ${id}`, "info");
     const data = await call(`watch?episodeId=${id}`);
     const cont = document.getElementById('mLinks');
-    cont.innerHTML = 'Buscando links...';
+    cont.innerHTML = 'Obteniendo links...';
     
     if (data && data.sources) {
         cont.innerHTML = '';
@@ -151,22 +156,20 @@ async function loadLinks(id) {
             b.innerText = `Calidad: ${s.quality}`;
             b.style.display = "block";
             b.style.margin = "10px auto";
-            b.style.padding = "10px";
+            b.style.padding = "12px";
             b.style.width = "100%";
             b.style.background = "#333";
             b.style.color = "white";
             b.style.border = "1px solid #ff4500";
             b.style.borderRadius = "5px";
             b.onclick = () => {
-                log(`Abriendo reproductor: ${s.url.substring(0, 30)}...`, "success");
+                log(`Abriendo servidor ${s.quality}`, "success");
                 window.open(s.url, '_blank');
             };
             cont.appendChild(b);
         });
-        log(`Se encontraron ${data.sources.length} servidores.`, "success");
     } else {
-        cont.innerHTML = 'No se encontraron links disponibles.';
-        log("No hay fuentes de video disponibles para este episodio.", "error");
+        cont.innerHTML = 'No se encontraron links.';
     }
 }
 
@@ -174,13 +177,7 @@ function cerrarModal() {
     document.getElementById('modal').style.display = 'none'; 
 }
 
-// Capturar errores no manejados
-window.addEventListener('unhandledrejection', function (event) {
-    log(`PROMISE ERROR: ${event.reason}`, 'error');
-});
-
-window.onerror = function(message, source, lineno, colno, error) {
-    log(`JS ERROR: ${message} en línea ${lineno}`, 'error');
-};
+// Errores globales de JS
+window.onerror = (m, s, l) => log(`JS ERROR: ${m} en línea ${l}`, 'error');
 
 window.onload = init;
