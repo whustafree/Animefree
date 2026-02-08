@@ -11,120 +11,137 @@
 </head>
 <body>
 
-    <div id="tab-home" class="tab-content active">
-        <header class="main-header">
-            <div class="logo">WHUSTAF<span>TVPro</span></div>
-            <button id="btn-install" class="install-btn" style="display:none;">⬇ Instalar</button>
-        </header>
-        <div class="content-body">
-            <h2 class="section-title">🔥 Estrenos Recientes</h2>
-            <div id="grid-latest" class="grid-container">
-                <div class="skeleton-card"></div><div class="skeleton-card"></div>
-                <div class="skeleton-card"></div><div class="skeleton-card"></div>
+    <div id="device-selector" class="device-selector">
+        <div class="selector-content">
+            <h1>Bienvenido a Whustaf TV</h1>
+            <p>¿Dónde estás viendo esto?</p>
+            <div class="selector-options">
+                <button id="btn-mode-tv" class="mode-btn focusable" onclick="selectMode('tv')">
+                    📺 Smart TV
+                    <span>Navegación con Control Remoto</span>
+                </button>
+                <button id="btn-mode-mobile" class="mode-btn focusable" onclick="selectMode('mobile')">
+                    📱 Móvil / PC
+                    <span>Navegación Táctil / Mouse</span>
+                </button>
             </div>
         </div>
     </div>
 
-    <div id="tab-search" class="tab-content">
-        <header class="search-header-fixed">
-            <div class="search-wrapper">
-                <input type="text" id="inp" class="search-input focusable" placeholder="Buscar..." autocomplete="off">
-                <button class="search-btn focusable" onclick="buscar()">🔍</button>
-            </div>
-            <div id="genre-list" class="genre-scroll"></div>
-        </header>
-        <div class="content-body" style="padding-top: 130px;">
-            <div id="grid-search" class="grid-container">
-                <div class="placeholder-msg">
-                    <p style="font-size: 3rem;">🔍</p>
-                    <p>Explora el catálogo completo</p>
-                </div>
-            </div>
-        </div>
+    <div id="rotate-warning">
+        <div class="rotate-icon">⟳</div>
+        <p>El Modo TV requiere pantalla horizontal.</p>
     </div>
 
-    <div id="tab-favorites" class="tab-content">
-        <header class="main-header">
-            <div class="header-title">❤️ Mis Favoritos</div>
-        </header>
-        <div class="content-body">
-            <div id="grid-favorites" class="grid-container"></div>
-        </div>
-    </div>
-
-    <div id="tab-history" class="tab-content">
-        <header class="main-header">
-            <div class="header-title">🕒 Historial</div>
-            <button class="clear-history focusable" onclick="borrarHistorial()">🗑️</button>
-        </header>
-        <div class="content-body">
-            <div id="grid-history" class="grid-container"></div>
-        </div>
-    </div>
-
-    <div id="details-modal" class="full-modal">
-        <div class="backdrop-container">
-            <div id="backdrop-img" class="backdrop-img"></div>
-            <div class="backdrop-overlay"></div>
-        </div>
-        <div class="modal-content">
-            <button class="close-modal-btn focusable" onclick="cerrarDetalles()">✕</button>
+    <div id="app-container" style="display:none;">
+        
+        <div id="tab-home" class="tab-content active">
+            <header class="main-header">
+                <div class="logo">WHUSTAF<span>TV</span></div>
+                <button id="btn-install" class="install-btn focusable" style="display:none;">⬇ Instalar</button>
+                <button class="settings-icon focusable" onclick="cambiarTab('settings')">⚙️</button>
+            </header>
             
-            <div class="details-header">
-                <img id="det-img" src="" alt="Cover" class="cover-shadow">
-                <div class="details-info">
-                    <h1 id="det-title">Cargando...</h1>
-                    <div id="det-genres" class="badges"></div>
-                    <button id="btn-fav" class="fav-btn focusable" onclick="toggleFavorite()">
-                        ❤️ Agregar a Favoritos
-                    </button>
-                    <p id="det-synopsis">...</p>
-                </div>
+            <div id="hero-carousel" class="hero-carousel">
+                <div class="hero-wrapper" id="hero-wrapper">
+                    </div>
             </div>
 
-            <button id="btn-play-latest" class="primary-btn focusable">▶ Continuar Viendo</button>
-
-            <h3 class="ep-list-title">Lista de Episodios</h3>
-            <div id="det-episodes" class="episodes-grid"></div>
+            <div class="content-body">
+                <h2 class="section-title">🔥 Estrenos Recientes</h2>
+                <div id="grid-latest" class="grid-container"></div>
+            </div>
         </div>
-    </div>
 
-    <div id="player-modal" class="player-modal">
-        <div class="video-container">
-            <div id="video-wrapper"></div>
-            
-            <div class="player-controls">
-                <div class="player-header">
-                    <h3 id="player-title">Reproduciendo...</h3>
-                    <button id="btn-next-ep" class="next-ep-btn focusable" style="display:none;">
-                        Siguiente ▶
-                    </button>
+        <div id="tab-search" class="tab-content">
+            <header class="search-header-fixed">
+                <div class="search-wrapper">
+                    <input type="text" id="inp" class="search-input focusable" placeholder="Buscar..." autocomplete="off">
+                    <button class="search-btn focusable" onclick="buscar()">🔍</button>
                 </div>
-                
-                <div id="server-list" class="server-list"></div>
-                
-                <div class="player-actions">
-                    <button class="control-btn focusable" onclick="abrirDetallesDesdePlayer()">📺 Capítulos</button>
-                    <button class="control-btn focusable" onclick="cerrarReproductor()">✕ Cerrar</button>
+                <div id="genre-list" class="genre-scroll"></div>
+            </header>
+            <div class="content-body" style="padding-top: 130px;">
+                <div id="grid-search" class="grid-container">
+                    <div class="placeholder-msg"><p style="font-size: 3rem;">🔍</p><p>Explora el catálogo</p></div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <nav class="bottom-nav">
-        <button onclick="cambiarTab('home')" class="nav-btn focusable active" id="nav-home">
-            <span class="icon">🏠</span> Inicio
-        </button>
-        <button onclick="cambiarTab('search')" class="nav-btn focusable" id="nav-search">
-            <span class="icon">🔍</span> Buscar
-        </button>
-        <button onclick="cambiarTab('favorites')" class="nav-btn focusable" id="nav-favorites">
-            <span class="icon">❤️</span> Favs
-        </button>
-        <button onclick="cambiarTab('history')" class="nav-btn focusable" id="nav-history">
-            <span class="icon">🕒</span> Historial
-        </button>
-    </nav>
+        <div id="tab-favorites" class="tab-content">
+            <header class="main-header"><div class="header-title">❤️ Mis Favoritos</div></header>
+            <div class="content-body"><div id="grid-favorites" class="grid-container"></div></div>
+        </div>
+
+        <div id="tab-history" class="tab-content">
+            <header class="main-header">
+                <div class="header-title">🕒 Historial</div>
+                <button class="clear-history focusable" onclick="borrarHistorial()">🗑️</button>
+            </header>
+            <div class="content-body"><div id="grid-history" class="grid-container"></div></div>
+        </div>
+
+        <div id="tab-settings" class="tab-content">
+            <header class="main-header"><div class="header-title">⚙️ Configuración</div></header>
+            <div class="content-body settings-body">
+                <div class="settings-card">
+                    <h3>💾 Copia de Seguridad</h3>
+                    <p>Guarda tus favoritos e historial para no perderlos.</p>
+                    <button class="primary-btn focusable" onclick="exportData()">📤 Exportar Datos</button>
+                    <div style="height:10px;"></div>
+                    <button class="fav-btn focusable" onclick="document.getElementById('file-input').click()">📥 Importar Datos</button>
+                    <input type="file" id="file-input" style="display:none" onchange="importData(this)">
+                </div>
+            </div>
+        </div>
+
+        <div id="details-modal" class="full-modal">
+            <div class="backdrop-container">
+                <div id="backdrop-img" class="backdrop-img"></div>
+                <div class="backdrop-overlay"></div>
+            </div>
+            <div class="modal-content">
+                <button class="close-modal-btn focusable" onclick="cerrarDetalles()">✕</button>
+                <div class="details-header">
+                    <img id="det-img" src="" alt="Cover" class="cover-shadow">
+                    <div class="details-info">
+                        <h1 id="det-title">Cargando...</h1>
+                        <div id="det-badges" class="badges-row"></div>
+                        <div id="det-genres" class="badges"></div>
+                        <button id="btn-fav" class="fav-btn focusable" onclick="toggleFavorite()">❤️ Favoritos</button>
+                        <p id="det-synopsis">...</p>
+                    </div>
+                </div>
+                <button id="btn-play-latest" class="primary-btn focusable">▶ Continuar Viendo</button>
+                <h3 class="ep-list-title">Capítulos</h3>
+                <div id="det-episodes" class="episodes-grid"></div>
+            </div>
+        </div>
+
+        <div id="player-modal" class="player-modal">
+            <div class="video-container">
+                <div id="video-wrapper"></div>
+                <div class="player-controls" id="player-controls">
+                    <div class="player-header">
+                        <h3 id="player-title">Reproduciendo...</h3>
+                        <button id="btn-next-ep" class="next-ep-btn focusable" style="display:none;">Siguiente ▶</button>
+                    </div>
+                    <div id="server-list" class="server-list"></div>
+                    <div class="player-actions">
+                        <button class="control-btn focusable" onclick="abrirDetallesDesdePlayer()">📺 Capítulos</button>
+                        <button class="control-btn focusable" onclick="cerrarReproductor()">✕ Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="bottom-nav" id="main-nav">
+            <button onclick="cambiarTab('home')" class="nav-btn focusable active" id="nav-home"><span class="icon">🏠</span></button>
+            <button onclick="cambiarTab('search')" class="nav-btn focusable" id="nav-search"><span class="icon">🔍</span></button>
+            <button onclick="cambiarTab('favorites')" class="nav-btn focusable" id="nav-favorites"><span class="icon">❤️</span></button>
+            <button onclick="cambiarTab('history')" class="nav-btn focusable" id="nav-history"><span class="icon">🕒</span></button>
+        </nav>
+    </div>
 
     <script src="app.js"></script>
     <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>

@@ -4,6 +4,7 @@ const PROXIES = [ (u)=>u, (u)=>`https://api.allorigins.win/raw?url=${encodeURICo
 let currentAnimeData = null; 
 let currentEpisodeIndex = -1; 
 let deferredPrompt;
+let isTV = false;
 
 // VARIABLES SCROLL
 let searchPage = 1; let currentQuery = ""; let searchMode = ""; let isLoadingMore = false; let hasMoreResults = true;
@@ -12,21 +13,99 @@ const GENRE_MAP = {
     "Acción": "accion", "Artes Marciales": "artes-marciales", "Aventuras": "aventura", "Carreras": "carreras", "Ciencia Ficción": "ciencia-ficcion", "Comedia": "comedia", "Demencia": "demencia", "Demonios": "demonios", "Deportes": "deportes", "Drama": "drama", "Ecchi": "ecchi", "Escolares": "escolares", "Espacial": "espacial", "Fantasía": "fantasia", "Harem": "harem", "Histórico": "historico", "Infantil": "infantil", "Josei": "josei", "Juegos": "juegos", "Magia": "magia", "Mecha": "mecha", "Militar": "militar", "Misterio": "misterio", "Música": "musica", "Parodia": "parodia", "Policía": "policia", "Psicológico": "psicologico", "Recuentos de la vida": "recuentos-de-la-vida", "Romance": "romance", "Samurai": "samurai", "Seinen": "seinen", "Shoujo": "shoujo", "Shounen": "shounen", "Sobrenatural": "sobrenatural", "Superpoderes": "superpoderes", "Suspenso": "suspenso", "Terror (Gore)": "terror", "Vampiros": "vampiros", "Yaoi": "yaoi", "Yuri": "yuri"
 };
 
+// --- 1. LÓGICA DE SELECTOR DE MODO (TV vs MÓVIL) ---
+window.onload = () => {
+    // Detectar si ya eligió modo antes
+    const savedMode = localStorage.getItem('appMode');
+    if (savedMode) {
+        selectMode(savedMode);
+    } else {
+        // Auto-detectar Smart TV por User Agent (opcional)
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.includes('smart-tv') || ua.includes('webos') || ua.includes('tizen')) {
+            document.getElementById('btn-mode-tv').focus(); // Sugerir TV
+        }
+    }
+    
+    // Instalar Service Worker
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+    
+    // Instalar PWA
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault(); deferredPrompt = e;
+        const btn = document.getElementById('btn-install');
+        if(btn) { btn.style.display = 'inline-block'; btn.onclick = () => { btn.style.display = 'none'; deferredPrompt.prompt(); }; }
+    });
+};
+
+function selectMode(mode) {
+    document.getElementById('device-selector').style.display = 'none';
+    document.getElementById('app-container').style.display = 'block';
+    localStorage.setItem('appMode', mode);
+    
+    if (mode === 'tv') {
+        isTV = true;
+        document.body.classList.add('tv-mode');
+        // En TV enfocamos el primer elemento automáticamente
+        enfocarPrimerElemento('tab-home');
+    } else {
+        isTV = false;
+        document.body.classList.remove('tv-mode');
+    }
+    
+    // Iniciar App
+    cargarEstrenos(); 
+    renderHistorial(); 
+    renderGeneros(); 
+    renderFavorites();
+    history.replaceState({ page: 'home' }, "", " ");
+}
+
 // --- UTILIDAD TV: ENFOCAR ---
 function enfocarPrimerElemento(contenedorId) {
+    if(!isTV) return;
     setTimeout(() => {
         const container = document.getElementById(contenedorId);
         if (container) {
             const primer = container.querySelector('.focusable');
             if (primer) primer.focus();
         }
-    }, 100);
+    }, 200);
 }
 
-// --- INSTALACIÓN ---
-window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const btn = document.getElementById('btn-install'); if(btn) { btn.style.display = 'inline-block'; btn.onclick = () => { btn.style.display = 'none'; deferredPrompt.prompt(); }; } });
+// --- 2. GESTIÓN DE DATOS (BACKUP) ---
+function exportData() {
+    const data = {
+        favorites: JSON.parse(localStorage.getItem('favorites') || '[]'),
+        history: JSON.parse(localStorage.getItem('animeHistory') || '[]'),
+        watched: JSON.parse(localStorage.getItem('watchedList') || '[]')
+    };
+    const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "whustaf-backup.json";
+    a.click();
+}
 
-// --- HISTORIAL NAV (FIXED) ---
+function importData(input) {
+    const file = input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if(data.favorites) localStorage.setItem('favorites', JSON.stringify(data.favorites));
+            if(data.history) localStorage.setItem('animeHistory', JSON.stringify(data.history));
+            if(data.watched) localStorage.setItem('watchedList', JSON.stringify(data.watched));
+            alert("¡Datos restaurados con éxito!");
+            location.reload();
+        } catch(err) { alert("Error al leer archivo"); }
+    };
+    reader.readAsText(file);
+}
+
+// --- HISTORIAL NAV ---
 window.addEventListener('popstate', (event) => {
     const hash = window.location.hash;
     const player = document.getElementById('player-modal');
@@ -34,12 +113,12 @@ window.addEventListener('popstate', (event) => {
 
     if (hash === '#player') {
         player.style.display = 'flex';
-        details.style.display = 'none'; // FIX DOBLE X: Ocultar detalles si está el player
+        details.style.display = 'none'; // Fix Doble X
         enfocarPrimerElemento('player-controls');
     } else if (hash === '#details') {
         player.style.display = 'none'; 
         document.getElementById('video-wrapper').innerHTML = ''; 
-        details.style.display = 'block'; // Mostrar detalles al volver
+        details.style.display = 'block'; 
         setTimeout(() => document.getElementById('btn-play-latest').focus(), 100);
     } else {
         player.style.display = 'none';
@@ -59,14 +138,21 @@ function agregarHistorial(stateId) {
 function cambiarTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${tabId}`).classList.add('active');
-    document.getElementById(`nav-${tabId}`).classList.add('active');
+    
+    // Manejo especial para settings
+    const targetTab = document.getElementById(`tab-${tabId}`);
+    if(targetTab) targetTab.classList.add('active');
+    
+    const navBtn = document.getElementById(`nav-${tabId}`);
+    if(navBtn) navBtn.classList.add('active');
+    
     window.scrollTo(0, 0);
     
     if(tabId === 'history') { renderHistorial(); enfocarPrimerElemento('grid-history'); }
     else if(tabId === 'favorites') { renderFavorites(); enfocarPrimerElemento('grid-favorites'); }
     else if(tabId === 'home') { enfocarPrimerElemento('grid-latest'); }
     else if(tabId === 'search') { document.getElementById('inp').focus(); }
+    else if(tabId === 'settings') { enfocarPrimerElemento('tab-settings'); }
 }
 
 // --- FETCH ---
@@ -84,11 +170,6 @@ async function fetchData(endpoint) {
     return null;
 }
 
-window.onload = () => { 
-    cargarEstrenos(); renderHistorial(); renderGeneros(); renderFavorites();
-    history.replaceState({ page: 'home' }, "", " "); 
-};
-
 // --- GÉNEROS ---
 function renderGeneros() {
     const container = document.getElementById('genre-list'); if(!container) return; container.innerHTML = '';
@@ -98,14 +179,38 @@ function renderGeneros() {
     });
 }
 
-// --- HOME ---
+// --- HOME & CARRUSEL ---
 async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
     const data = await fetchData('/list/latest-episodes');
     if (data) {
         grid.innerHTML = '';
         data.forEach(item => crearTarjeta(item, grid, 'latest'));
-        enfocarPrimerElemento('grid-latest');
+        
+        // 3. CARRUSEL LOGIC
+        const slider = document.getElementById('hero-wrapper');
+        slider.innerHTML = '';
+        // Tomamos los 5 primeros para el carrusel
+        const top5 = data.slice(0, 5);
+        top5.forEach(item => {
+            const slide = document.createElement('div');
+            slide.className = 'hero-item focusable';
+            // Simulamos backdrop con la cover
+            slide.innerHTML = `
+                <img src="${item.cover}" class="hero-img">
+                <div class="hero-caption">
+                    <span class="hero-badge">NUEVO EPISODIO</span>
+                    <h2 class="hero-title">${item.title}</h2>
+                </div>
+            `;
+            slide.onclick = () => {
+                const slugAnime = item.slug.split('-').slice(0, -1).join('-');
+                cargarDetallesAnime(slugAnime);
+            };
+            slider.appendChild(slide);
+        });
+
+        if(isTV) enfocarPrimerElemento('grid-latest');
     }
 }
 
@@ -127,7 +232,7 @@ async function cargarMasResultados(limpiar = false) {
     if (data && data.media && data.media.length > 0) {
         data.media.forEach(anime => crearTarjeta(anime, grid, 'search'));
         searchPage++; hasMoreResults = data.hasNextPage || false;
-        if(limpiar) enfocarPrimerElemento('grid-search');
+        if(limpiar && isTV) enfocarPrimerElemento('grid-search');
     } else { hasMoreResults = false; if (limpiar) grid.innerHTML = '<div class="placeholder-msg"><p>Sin resultados</p></div>'; }
     isLoadingMore = false;
 }
@@ -142,7 +247,22 @@ function crearTarjeta(item, container, context) {
     const card = document.createElement('div'); card.className = 'anime-card focusable'; card.setAttribute('tabindex', '0');
     const img = item.cover || 'https://via.placeholder.com/150';
     let meta = context === 'latest' ? `Ep ${item.number}` : (context === 'search' ? (item.type || 'Anime') : `Ep ${item.lastEp}`);
-    card.innerHTML = `<img src="${img}" loading="lazy">${context === 'latest' ? '<div class="badge-new">NUEVO</div>' : ''}<div class="info"><span class="title">${item.title}</span><div class="meta">${meta}</div></div>`;
+    
+    // 4. ETIQUETAS (BADGES)
+    let badgeHTML = '';
+    if(item.type) {
+        let typeClass = 'st-tv';
+        if(item.type === 'Movie') typeClass = 'st-movie';
+        if(item.type === 'OVA') typeClass = 'st-ova';
+        badgeHTML = `<span class="status-badge ${typeClass}">${item.type}</span>`;
+    }
+
+    card.innerHTML = `
+        ${badgeHTML}
+        <img src="${img}" loading="lazy">
+        ${context === 'latest' ? '<div class="badge-new">NUEVO</div>' : ''}
+        <div class="info"><span class="title">${item.title}</span><div class="meta">${meta}</div></div>
+    `;
     
     card.onclick = () => {
         const realSlug = item.animeSlug || item.slug;
@@ -200,7 +320,6 @@ async function cargarDetallesAnime(slug) {
 
         if(info.episodes.length > 0) {
             document.getElementById('btn-play-latest').onclick = () => {
-                // Como ordenamos 1,2,3... el ÚLTIMO del array es el más nuevo
                 const lastIndex = info.episodes.length - 1;
                 currentEpisodeIndex = lastIndex; 
                 const lastEp = info.episodes[lastIndex];
@@ -231,7 +350,7 @@ function cerrarDetalles() { history.back(); }
 async function prepararReproductor(slug, title, number, cover) {
     agregarHistorial('player');
     document.getElementById('player-modal').style.display = 'flex';
-    document.getElementById('details-modal').style.display = 'none'; // FIX DOBLE X: Asegurar que detalles no se vea
+    document.getElementById('details-modal').style.display = 'none'; // FIX DOBLE X
     document.getElementById('player-title').innerText = `Ep ${number}: ${title}`;
     document.getElementById('video-wrapper').innerHTML = '';
     document.getElementById('server-list').innerHTML = 'Cargando...';
@@ -241,7 +360,7 @@ async function prepararReproductor(slug, title, number, cover) {
 
     const btnNext = document.getElementById('btn-next-ep');
     
-    // Lógica Siguiente (ASCENDENTE): Si no es el último, sumamos 1
+    // Lógica Siguiente (ASCENDENTE)
     if (currentAnimeData && currentEpisodeIndex < currentAnimeData.episodes.length - 1) {
         btnNext.style.display = 'block';
         btnNext.onclick = () => {
