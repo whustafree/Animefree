@@ -1,6 +1,5 @@
-// Aumenta el número para forzar la actualización
-const CACHE_NAME = 'animofree-v12-ahmed'; 
-
+const CACHE_NAME = 'animofree-v13-pro'; // <--- V13
+// ... el resto igual que siempre ...
 const ASSETS = [
   './',
   './index.html',
