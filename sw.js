@@ -1,6 +1,4 @@
-const CACHE_NAME = 'animofree-v21-tabs';
-
-// ... el resto igual que siempre ...
+const CACHE_NAME = 'animofree-v23-stable-tabs';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +7,6 @@ const ASSETS = [
   './manifest.json'
 ];
 
-// ... (Resto del código del Service Worker igual que siempre)
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -31,7 +28,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignoramos caché para las APIs nuevas para tener siempre lo último
   if (event.request.url.includes('ahmedrangel') || event.request.url.includes('api')) {
     return;
   }
