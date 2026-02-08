@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animofree-v33-order-fix';
+const CACHE_NAME = 'animofree-v34-order-fix';
 const ASSETS = [
   './',
   './index.html',

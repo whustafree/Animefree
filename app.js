@@ -159,10 +159,13 @@ async function cargarDetallesAnime(slug) {
     const info = await fetchData(`/anime/${slug}`);
     
     if(info) {
-        // --- AQUÍ ESTÁ EL FIX DE ORDEN ---
-        // Forzamos que los episodios estén de Mayor a Menor (Ej: 12, 11, ... 1)
-        info.episodes.sort((a,b) => parseFloat(b.number) - parseFloat(a.number));
-        
+        // --- FIX CRÍTICO: ORDENAMIENTO FORZADO ---
+        // Esto asegura que el Ep 12 esté primero y el Ep 1 al final.
+        // Así la lógica de "Siguiente" funcionará siempre.
+        if (info.episodes) {
+            info.episodes.sort((a,b) => parseFloat(b.number) - parseFloat(a.number));
+        }
+
         currentAnimeData = info; 
         document.getElementById('det-title').innerText = info.title;
         document.getElementById('det-synopsis').innerText = (info.synopsis || "Sin sinopsis.").substring(0, 300) + "...";
@@ -178,7 +181,7 @@ async function cargarDetallesAnime(slug) {
 
         if(info.episodes.length > 0) {
             document.getElementById('btn-play-latest').onclick = () => {
-                // Como ordenamos DESC (12...1), el [0] es el ÚLTIMO capítulo salido
+                // Al estar ordenado DESC, el 0 es el último capítulo (el más nuevo)
                 currentEpisodeIndex = 0; 
                 prepararReproductor(info.episodes[0].slug, info.title, info.episodes[0].number, info.cover);
             };
@@ -211,11 +214,14 @@ async function prepararReproductor(slug, title, number, cover) {
     if(currentAnimeData) guardarHistorial({animeSlug: currentAnimeData.slug, slug:slug, title:title, lastEp:number, cover:cover});
     marcarComoVisto(slug);
 
-    // LOGICA SIGUIENTE
+    // LOGICA SIGUIENTE (Ahora funciona porque el orden está garantizado)
     const btnNext = document.getElementById('btn-next-ep');
-    // Ahora que estamos seguros que la lista es DESCENDENTE (12, 11, ... 1)
-    // El "Siguiente" (Ej: ver 2 después del 1) está en un índice MENOR.
-    // Ej: [Ep2, Ep1]. Estoy en Ep1 (index 1). Index-1 = 0 (Ep2). Correcto.
+    
+    // Si currentEpisodeIndex > 0, significa que NO estamos en el índice 0 (el capítulo más nuevo).
+    // Por tanto, existe un índice menor (más hacia el futuro).
+    // Ej: Array [Ep12, Ep11... Ep1]. Estoy en Ep1 (Index 11).
+    // 11 > 0 ? Sí.
+    // nextEp = Array[10] -> Ep2. Correcto.
     if (currentAnimeData && currentEpisodeIndex > 0) {
         btnNext.style.display = 'block';
         btnNext.onclick = () => {
