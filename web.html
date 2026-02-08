@@ -68,17 +68,20 @@
         </div>
     </div>
 
-    <div id="player-modal" class="player-modal">
-        <div class="video-container"><div id="video-wrapper"></div></div>
-        <div class="player-controls">
-            <h3 id="player-title">Reproduciendo...</h3>
-            <div id="server-list" class="server-list"></div>
-            <div class="player-actions">
-                <button class="control-btn" id="btn-next-ep" style="display:none;">Siguiente ▶</button>
-                <button class="control-btn" onclick="cerrarReproductor()">✕ Cerrar</button>
-            </div>
+<div id="player-modal" class="player-modal">
+    <div class="video-container">
+        <div id="video-wrapper"></div>
+    </div>
+    <div class="player-controls">
+        <h3 id="player-title">Reproduciendo...</h3>
+        <div id="server-list" class="server-list"></div>
+        <div class="player-actions">
+            <button class="control-btn" onclick="volverALista()">⬅ Capítulos</button> 
+            <button class="control-btn" id="btn-next-ep" style="display:none;">Siguiente ▶</button>
+            <button class="control-btn close-player" onclick="cerrarReproductor()">✕ Cerrar</button>
         </div>
     </div>
+</div>
 
     <nav class="bottom-nav">
         <button onclick="cambiarTab('home')" class="nav-btn active" id="nav-home">🏠</button>
