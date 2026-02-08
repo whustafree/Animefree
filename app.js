@@ -127,9 +127,8 @@ function crearTarjeta(item, container) {
         // Lógica unificada de click
         const slug = item.animeSlug || (item.slug.includes('-episodio-') ? item.slug.split('-').slice(0,-1).join('-') : item.slug);
         cargarDetallesAnime(slug).then(() => {
-            // Si es clic directo en episodio (grid estrenos), reproducir directo si es TV? No, mejor detalles siempre es más seguro
-            if(isTV && item.number) { // Opcional: Auto-play en TV
-                // prepararReproductor(item.slug, item.title, item.number, item.cover); 
+            if(isTV && item.number) { 
+                // Opcional: Auto-play en TV
             }
         });
     };
