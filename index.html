@@ -13,16 +13,16 @@
 
     <div id="device-selector" class="device-selector">
         <div class="selector-content">
-            <h1>Whustaf TV</h1>
-            <p>Selecciona tu experiencia</p>
+            <h1>Bienvenido</h1>
+            <p>Selecciona tu dispositivo:</p>
             <div class="selector-options">
                 <button id="btn-mode-tv" class="mode-btn focusable" onclick="selectMode('tv')">
                     📺 Smart TV
-                    <span>Interfaz de Cine</span>
+                    <span>Modo Cine</span>
                 </button>
                 <button id="btn-mode-mobile" class="mode-btn focusable" onclick="selectMode('mobile')">
-                    📱 Móvil / PC
-                    <span>Interfaz Táctil</span>
+                    📱 Celular / PC
+                    <span>Modo Clásico</span>
                 </button>
             </div>
         </div>
@@ -30,35 +30,39 @@
 
     <div id="app-container" style="display:none;">
         
+        <nav id="tv-nav" class="tv-nav">
+            <div class="tv-logo">WHUSTAF<span>TV</span></div>
+            <div class="tv-menu">
+                <button onclick="cambiarTab('home')" class="tv-link focusable active" id="tv-btn-home">Inicio</button>
+                <button onclick="cambiarTab('search')" class="tv-link focusable" id="tv-btn-search">Buscar</button>
+                <button onclick="cambiarTab('favorites')" class="tv-link focusable" id="tv-btn-favorites">Favoritos</button>
+                <button onclick="cambiarTab('history')" class="tv-link focusable" id="tv-btn-history">Historial</button>
+                <button onclick="cambiarTab('settings')" class="tv-link focusable" id="tv-btn-settings">Ajustes</button>
+            </div>
+        </nav>
+
         <div id="tab-home" class="tab-content active">
+            <header class="main-header mobile-only">
+                <div class="logo">WHUSTAF<span>TV</span></div>
+                <button id="btn-install" class="install-btn" style="display:none;">⬇ App</button>
+            </header>
+
             <div id="hero-section" class="hero-section">
                 <div class="hero-backdrop" id="hero-backdrop"></div>
                 <div class="hero-gradient"></div>
                 <div class="hero-info">
-                    <span class="hero-tag">ESTRENO DESTACADO</span>
-                    <h1 id="hero-title" class="hero-title">Cargando...</h1>
-                    <p id="hero-desc" class="hero-desc">...</p>
+                    <span class="hero-tag">ESTRENO</span>
+                    <h1 id="hero-title">Cargando...</h1>
+                    <p id="hero-desc">...</p>
                     <div class="hero-buttons">
-                        <button id="hero-play" class="hero-btn primary focusable">▶ Reproducir</button>
-                        <button id="hero-details" class="hero-btn secondary focusable">Más Información</button>
+                        <button id="hero-play" class="hero-btn primary focusable">▶ Ver Ahora</button>
                     </div>
                 </div>
             </div>
 
-            <div class="content-body" style="position: relative; z-index: 10;">
-                
-                <div id="row-history" style="display:none;">
-                    <h2 class="section-title">⏱️ Continuar Viendo</h2>
-                    <div id="grid-home-history" class="grid-container horizontal-scroll"></div>
-                </div>
-
-                <div id="row-favorites" style="display:none;">
-                    <h2 class="section-title">❤️ Mi Lista</h2>
-                    <div id="grid-home-favorites" class="grid-container horizontal-scroll"></div>
-                </div>
-
-                <h2 class="section-title">🔥 Nuevos Episodios</h2>
-                <div id="grid-latest" class="grid-container horizontal-scroll">
+            <div class="content-body">
+                <h2 class="section-title">🔥 Estrenos Recientes</h2>
+                <div id="grid-latest" class="grid-container">
                     <div class="skeleton-card"></div><div class="skeleton-card"></div>
                     <div class="skeleton-card"></div><div class="skeleton-card"></div>
                 </div>
@@ -68,34 +72,39 @@
         <div id="tab-search" class="tab-content">
             <header class="search-header-fixed">
                 <div class="search-wrapper">
-                    <input type="text" id="inp" class="search-input focusable" placeholder="Buscar..." autocomplete="off">
+                    <input type="text" id="inp" class="search-input focusable" placeholder="Buscar anime..." autocomplete="off">
                     <button class="search-btn focusable" onclick="buscar()">🔍</button>
                 </div>
                 <div id="genre-list" class="genre-scroll"></div>
             </header>
             <div class="content-body" style="padding-top: 130px;">
                 <div id="grid-search" class="grid-container">
-                    <div class="placeholder-msg"><p style="font-size: 3rem;">🔍</p></div>
+                    <div class="placeholder-msg"><p>🔍</p><p>Busca un anime</p></div>
                 </div>
             </div>
         </div>
 
         <div id="tab-favorites" class="tab-content">
-            <header class="main-header"><div class="header-title">❤️ Mis Favoritos</div></header>
+            <header class="main-header mobile-only"><div class="header-title">❤️ Mis Favoritos</div></header>
             <div class="content-body"><div id="grid-favorites" class="grid-container"></div></div>
         </div>
+
         <div id="tab-history" class="tab-content">
-            <header class="main-header"><div class="header-title">🕒 Historial</div></header>
+            <header class="main-header mobile-only">
+                <div class="header-title">🕒 Historial</div>
+                <button class="clear-history focusable" onclick="borrarHistorial()">🗑️</button>
+            </header>
             <div class="content-body"><div id="grid-history" class="grid-container"></div></div>
         </div>
+
         <div id="tab-settings" class="tab-content">
-            <header class="main-header"><div class="header-title">⚙️ Configuración</div></header>
+            <header class="main-header mobile-only"><div class="header-title">⚙️ Ajustes</div></header>
             <div class="content-body settings-body">
                 <div class="settings-card">
-                    <h3>Gestión de Datos</h3>
-                    <button class="primary-btn focusable" onclick="exportData()">📤 Guardar Copia</button>
-                    <div style="height:15px"></div>
-                    <button class="fav-btn focusable" onclick="document.getElementById('file-input').click()">📥 Cargar Copia</button>
+                    <h3>Copia de Seguridad</h3>
+                    <button class="primary-btn focusable" onclick="exportData()">📤 Guardar Datos</button>
+                    <br><br>
+                    <button class="fav-btn focusable" onclick="document.getElementById('file-input').click()">📥 Cargar Datos</button>
                     <input type="file" id="file-input" style="display:none" onchange="importData(this)">
                 </div>
             </div>
@@ -117,8 +126,8 @@
                         <p id="det-synopsis">...</p>
                     </div>
                 </div>
-                <button id="btn-play-latest" class="primary-btn focusable">▶ Reproducir</button>
-                <h3 class="ep-list-title">Episodios</h3>
+                <button id="btn-play-latest" class="primary-btn focusable">▶ Ver Capítulos</button>
+                <h3 class="ep-list-title">Lista de Episodios</h3>
                 <div id="det-episodes" class="episodes-grid"></div>
             </div>
         </div>
@@ -140,7 +149,7 @@
             </div>
         </div>
 
-        <nav class="bottom-nav" id="main-nav">
+        <nav class="bottom-nav mobile-only">
             <button onclick="cambiarTab('home')" class="nav-btn focusable active" id="nav-home"><span class="icon">🏠</span></button>
             <button onclick="cambiarTab('search')" class="nav-btn focusable" id="nav-search"><span class="icon">🔍</span></button>
             <button onclick="cambiarTab('favorites')" class="nav-btn focusable" id="nav-favorites"><span class="icon">❤️</span></button>
