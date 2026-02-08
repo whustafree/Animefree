@@ -601,3 +601,27 @@ a {
     font-size: 2rem; 
     cursor: pointer;
 }
+/* Ajuste para que la lista gigante sea fluida */
+.grid-container { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
+    gap: 15px; 
+    padding: 15px; 
+}
+
+/* Mejora de chips de género */
+.genre-chip { 
+    background: #222; 
+    border: 1px solid #444; 
+    color: #ccc; 
+    padding: 8px 20px; 
+    border-radius: 5px; 
+    margin-right: 8px;
+    font-size: 0.85rem;
+}
+
+.genre-chip:hover {
+    background: var(--primary);
+    color: white;
+    border-color: white;
+}
