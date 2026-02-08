@@ -7,7 +7,6 @@ function log(msg, type = 'info') {
     d.style.paddingLeft = "5px";
     d.style.fontSize = "11px";
     
-    // Colores tipo Hacker
     if (type === 'error') d.style.color = '#ff5555';
     else if (type === 'success') d.style.color = '#55ff55';
     else if (type === 'warn') d.style.color = '#ffff55';
@@ -19,69 +18,84 @@ function log(msg, type = 'info') {
     consoleDiv.scrollTop = consoleDiv.scrollHeight;
 }
 
-// --- LÓGICA DE CONEXIÓN ROBUSTA ---
+// --- LÓGICA DE CONEXIÓN INTELIGENTE ---
 async function call(path) {
-    const targetUrl = `https://api.consumet.org/anime/animeflv/${path}`;
-    
-    // Usamos 'raw' en allorigins para recibir JSON directo y evitar errores de parseo
-    // Añadimos un timestamp para evitar que el celular guarde caché vieja
-    const timeStamp = new Date().getTime();
-    
-    const proxies = [
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}&t=${timeStamp}`,
-        `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-        `https://thingproxy.freeboard.io/fetch/${targetUrl}`
+    // LISTA DE APIS (Si una falla, salta a la siguiente)
+    // 1. Animetize (Clon público de Consumet - Más rápido)
+    // 2. Consumet Oficial (vía Proxy para saltar bloqueo)
+    const candidates = [
+        { 
+            url: `https://animetize-api.vercel.app/anime/animeflv/${path}`, 
+            proxy: false 
+        },
+        { 
+            url: `https://api.consumet.org/anime/animeflv/${path}`, 
+            proxy: true 
+        }
     ];
 
     log(`Pidiendo datos...`, 'warn');
 
-    for (const proxyUrl of proxies) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos de espera máx
+    for (const api of candidates) {
+        let fetchUrl = api.url;
+        
+        // Si la API requiere proxy (como la oficial), lo envolvemos
+        if (api.proxy) {
+            const timeStamp = new Date().getTime();
+            fetchUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(api.url)}&t=${timeStamp}`;
+        }
 
-            const response = await fetch(proxyUrl, {
+        try {
+            log(`Probando servidor: ${new URL(api.url).hostname}...`, 'info');
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 seg límite
+
+            const response = await fetch(fetchUrl, {
                 method: 'GET',
                 signal: controller.signal,
-                referrerPolicy: 'no-referrer' // <--- ESTO ES CLAVE PARA CELULARES
+                referrerPolicy: 'no-referrer'
             });
             
             clearTimeout(timeoutId);
 
             if (!response.ok) {
-                log(`Proxy devolvió error: ${response.status}`, 'warn');
-                continue;
+                log(`Error ${response.status} en servidor.`, 'warn');
+                continue; // Salta al siguiente candidato
             }
 
             const data = await response.json();
             
-            // Verificamos si la respuesta tiene sentido
-            if (data.results || data.episodes || data.sources) {
-                log(`¡Conexión exitosa!`, 'success');
-                return data; // Devolvemos el JSON limpio
-            } else if (data.contents) {
-                // A veces AllOrigins devuelve el JSON dentro de 'contents'
-                return JSON.parse(data.contents);
+            // Validación: ¿Recibimos datos reales o un error camuflado?
+            let finalData = data;
+            if (data.contents) {
+                // Desempaquetar si viene de AllOrigins
+                finalData = JSON.parse(data.contents);
+            }
+
+            if (finalData.results || finalData.episodes || finalData.sources) {
+                log(`¡Conexión establecida!`, 'success');
+                return finalData;
             }
 
         } catch (error) {
-            log(`Intento fallido: ${error.message}`, 'error');
+            log(`Fallo intento: ${error.message}`, 'error');
         }
     }
 
-    log("ERROR FATAL: No se pudo conectar a ninguna API.", 'error');
+    log("ERROR CRÍTICO: Ninguna API respondió. Intenta más tarde.", 'error');
     return null;
 }
 
-// --- INTERFAZ ---
+// --- INTERFAZ (Sin cambios, solo lógica de visualización) ---
 async function init() {
-    log("Iniciando sistema...", "info");
+    log("Iniciando sistema (v2.1)...", "info");
     const data = await call("recent-episodes");
     
     if (data && data.results) {
         render(data.results);
     } else {
-        document.getElementById('grid').innerHTML = '<div style="text-align:center; padding:20px;">Servidores ocupados. Intenta recargar en 1 minuto.</div>';
+        document.getElementById('grid').innerHTML = '<div style="text-align:center; padding:20px;">Servidores ocupados o en mantenimiento.</div>';
     }
 }
 
@@ -104,11 +118,11 @@ function render(list) {
     list.forEach(a => {
         const c = document.createElement('div');
         c.className = 'anime-card';
-        // Proxy de imágenes para que se vean siempre
+        // Proxy de imágenes de Weserv para evitar roturas
         const imgUrl = `https://images.weserv.nl/?url=${encodeURIComponent(a.image)}`;
         
         c.innerHTML = `
-            <img src="${imgUrl}" loading="lazy" onerror="this.src='https://via.placeholder.com/140x200?text=Error+Img'">
+            <img src="${imgUrl}" loading="lazy" onerror="this.src='https://via.placeholder.com/140x200?text=Sin+Imagen'">
             <div>${a.title}</div>
         `;
         c.onclick = () => loadAnime(a.id, a.title);
@@ -127,7 +141,6 @@ async function loadAnime(id, title) {
     if (data && data.episodes) {
         const container = document.getElementById('mEps');
         container.innerHTML = '';
-        // Invertimos para que el cap 1 salga primero (opcional)
         data.episodes.reverse().forEach(e => {
             const b = document.createElement('div');
             b.className = 'ep-btn';
@@ -140,7 +153,7 @@ async function loadAnime(id, title) {
 }
 
 async function loadLinks(id) {
-    log(`Buscando video...`, 'info');
+    log(`Obteniendo video...`, 'info');
     document.getElementById('mLinks').innerHTML = 'Conectando con servidor de video...';
     
     const data = await call(`watch?episodeId=${id}`);
@@ -160,10 +173,10 @@ async function loadLinks(id) {
             b.style.border = "none";
             b.style.borderRadius = "8px";
             b.style.fontSize = "16px";
-            b.onclick = () => window.location.href = s.url; // Abre directo en el reproductor del cel
+            b.onclick = () => window.location.href = s.url;
             cont.appendChild(b);
         });
-        log("¡Enlace encontrado!", 'success');
+        log("¡Enlaces listos!", 'success');
     } else {
         cont.innerHTML = 'No se encontraron enlaces.';
         log("Sin enlaces disponibles.", 'error');
@@ -174,9 +187,5 @@ function cerrarModal() {
     document.getElementById('modal').style.display = 'none'; 
 }
 
-// Manejo de errores globales
-window.onerror = function(msg) {
-    log(`JS Error: ${msg}`, 'error');
-};
-
+window.onerror = (msg) => log(`JS Error: ${msg}`, 'error');
 window.onload = init;
