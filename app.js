@@ -69,7 +69,7 @@ function cambiarVista(id) {
     const btn = document.getElementById(`btn-${id}`);
     if (btn) btn.classList.add('active');
     
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll arriba automático
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if(id === 'history') renderHistorial();
 }
@@ -202,7 +202,7 @@ async function cargarDetallesAnime(slug) {
 
 function cerrarDetalles() { history.back(); }
 
-// --- REPRODUCTOR (ORDEN INTELIGENTE) ---
+// --- REPRODUCTOR (CON ESCUDO) ---
 async function prepararReproductor(slug, title, number, cover) {
     agregarHistorial('player');
     const modal = document.getElementById('player-modal');
@@ -210,6 +210,17 @@ async function prepararReproductor(slug, title, number, cover) {
     document.getElementById('player-title').innerText = `${title} - Ep ${number}`;
     document.getElementById('video-wrapper').innerHTML = '';
     
+    // Contenedor para el botón de escudo
+    let shieldContainer = document.getElementById('shield-control');
+    if(!shieldContainer) {
+        shieldContainer = document.createElement('div');
+        shieldContainer.id = 'shield-control';
+        shieldContainer.style.padding = "10px";
+        shieldContainer.style.textAlign = "center";
+        document.querySelector('.player-controls').prepend(shieldContainer);
+    }
+    shieldContainer.innerHTML = ''; // Limpiar botón anterior
+
     if (currentAnimeSlug) {
         guardarHistorial({ animeSlug: currentAnimeSlug, slug: slug, title: title, lastEp: number, cover: cover });
     }
@@ -221,12 +232,11 @@ async function prepararReproductor(slug, title, number, cover) {
     list.innerHTML = '';
 
     if (data && data.servers) {
-        // ORDENAR SERVIDORES: Ponemos los más limpios primero
+        // Orden inteligente
         const prioridad = ["Okru", "YourUpload", "Maru", "Netu", "Streamwish", "Mega"];
         data.servers.sort((a, b) => {
             const pA = prioridad.indexOf(a.name);
             const pB = prioridad.indexOf(b.name);
-            // Si no está en la lista, va al final (99)
             return (pA === -1 ? 99 : pA) - (pB === -1 ? 99 : pB);
         });
 
@@ -240,21 +250,40 @@ async function prepararReproductor(slug, title, number, cover) {
             btn.onclick = () => {
                 document.querySelectorAll('.server-list button').forEach(b=>b.classList.remove('active'));
                 btn.classList.add('active');
-                
-                // RESTAURAMOS EL VIDEO NORMAL (Sin Sandbox estricto)
-                // Usamos 'allow-popups' para que no se bloquee, pero...
-                // ...el bloqueo real lo haremos con el TRUCO DEL DNS (ver abajo)
-                const iframeHTML = `<iframe src="${url}" allowfullscreen allow="autoplay; encrypted-media; fullscreen"></iframe>`;
-                
-                document.getElementById('video-wrapper').innerHTML = iframeHTML;
+                cargarVideoConEscudo(url, true); // Por defecto: ACTIVADO
             };
             list.appendChild(btn);
-            if(i===0) btn.click(); // Autoplay con el mejor servidor
+            if(i===0) btn.click();
         });
     } else {
         list.innerHTML = 'Error: No hay servidores.';
     }
 }
+
+// MAGIA DEL ESCUDO
+function cargarVideoConEscudo(url, activo) {
+    const wrapper = document.getElementById('video-wrapper');
+    const shieldContainer = document.getElementById('shield-control');
+    
+    // Sandbox Estricto (Sin 'allow-popups') vs Normal
+    const sandboxRules = activo 
+        ? "allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"
+        : "allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation allow-popups";
+
+    wrapper.innerHTML = `<iframe src="${url}" allowfullscreen allow="autoplay; encrypted-media; fullscreen" sandbox="${sandboxRules}"></iframe>`;
+
+    // Botón para alternar
+    const btnText = activo ? "🛡️ Escudo ACTIVO (Sin Anuncios)" : "⚠️ Escudo DESACTIVADO (Permitir Popups)";
+    const btnColor = activo ? "#28a745" : "#ffc107";
+    const textColor = activo ? "white" : "black";
+    
+    shieldContainer.innerHTML = `
+        <button onclick="cargarVideoConEscudo('${url}', ${!activo})" style="background:${btnColor}; color:${textColor}; border:none; padding:8px 15px; border-radius:5px; font-weight:bold; width:100%; cursor:pointer;">
+            ${btnText} <br><small style="font-weight:normal">${activo ? 'Si el video no carga, toca aquí' : 'Cuidado: Saldrán anuncios'}</small>
+        </button>
+    `;
+}
+
 
 function abrirDetallesDesdePlayer() {
     history.back();
