@@ -1,4 +1,5 @@
-const CACHE_NAME = 'animofree-v23-stable-tabs';
+const CACHE_NAME = 'animofree-v24-genres';
+// Resto igual que la versión anterior...
 const ASSETS = [
   './',
   './index.html',
