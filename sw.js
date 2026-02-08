@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animofree-v7'; // <--- CAMBIADO A V7
+const CACHE_NAME = 'animofree-v8'; // <--- CAMBIADO A V7
 const ASSETS = [
   './',
   './index.html',
