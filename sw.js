@@ -1,5 +1,37 @@
-const CACHE_NAME = 'animofree-v42-restored';
-const ASSETS = ['./', './index.html', './style.css', './app.js', './manifest.json'];
-self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(()=>self.skipWaiting())));
-self.addEventListener('activate', e => e.waitUntil(caches.keys().then(k => Promise.all(k.map(key => key!==CACHE_NAME && caches.delete(key)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch', e => { if(!e.request.url.includes('api')) e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))); });
+const CACHE_NAME = 'animofree-v43-restore';
+const ASSETS = [
+  './',
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.json'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME)
+        .map(key => caches.delete(key))
+      );
+    })
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.url.includes('ahmedrangel') || event.request.url.includes('api')) {
+    return;
+  }
+  event.respondWith(
+    caches.match(event.request).then((response) => response || fetch(event.request))
+  );
+});

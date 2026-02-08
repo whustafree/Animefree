@@ -12,34 +12,55 @@ const GENRE_MAP = {
     "Acción": "accion", "Artes Marciales": "artes-marciales", "Aventuras": "aventura", "Carreras": "carreras", "Ciencia Ficción": "ciencia-ficcion", "Comedia": "comedia", "Demencia": "demencia", "Demonios": "demonios", "Deportes": "deportes", "Drama": "drama", "Ecchi": "ecchi", "Escolares": "escolares", "Espacial": "espacial", "Fantasía": "fantasia", "Harem": "harem", "Histórico": "historico", "Infantil": "infantil", "Josei": "josei", "Juegos": "juegos", "Magia": "magia", "Mecha": "mecha", "Militar": "militar", "Misterio": "misterio", "Música": "musica", "Parodia": "parodia", "Policía": "policia", "Psicológico": "psicologico", "Recuentos de la vida": "recuentos-de-la-vida", "Romance": "romance", "Samurai": "samurai", "Seinen": "seinen", "Shoujo": "shoujo", "Shounen": "shounen", "Sobrenatural": "sobrenatural", "Superpoderes": "superpoderes", "Suspenso": "suspenso", "Terror (Gore)": "terror", "Vampiros": "vampiros", "Yaoi": "yaoi", "Yuri": "yuri"
 };
 
-// --- UTILS TV ---
-function enfocarPrimerElemento(id) {
+// --- SOPORTE TV (SIMPLE) ---
+function enfocarPrimerElemento(contenedorId) {
     setTimeout(() => {
-        const el = document.getElementById(id)?.querySelector('.focusable');
-        if(el) el.focus();
-    }, 200);
+        const container = document.getElementById(contenedorId);
+        if (container) {
+            const primer = container.querySelector('.focusable');
+            if (primer) primer.focus();
+        }
+    }, 100);
 }
 
 // --- INSTALACIÓN ---
-window.onload = () => {
-    cargarEstrenos(); renderHistorial(); renderGeneros(); renderFavorites();
-    history.replaceState({ page: 'home' }, "", " ");
-    
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const btn = document.getElementById('btn-install'); if(btn) { btn.style.display = 'inline-block'; btn.onclick = () => { btn.style.display = 'none'; deferredPrompt.prompt(); }; } });
-};
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; const btn = document.getElementById('btn-install'); if(btn) { btn.style.display = 'inline-block'; btn.onclick = () => { btn.style.display = 'none'; deferredPrompt.prompt(); }; } });
+
+// --- HISTORIAL NAV ---
+window.addEventListener('popstate', (event) => {
+    const hash = window.location.hash;
+    const player = document.getElementById('player-modal');
+    const details = document.getElementById('details-modal');
+
+    if (hash === '#player') {
+        player.style.display = 'flex';
+        details.style.display = 'none'; // Evitar doble X
+        enfocarPrimerElemento('player-controls');
+    } else if (hash === '#details') {
+        player.style.display = 'none'; 
+        document.getElementById('video-wrapper').innerHTML = ''; 
+        details.style.display = 'block'; 
+        setTimeout(() => document.getElementById('btn-play-latest').focus(), 100);
+    } else {
+        player.style.display = 'none';
+        document.getElementById('video-wrapper').innerHTML = '';
+        details.style.display = 'none';
+        if(document.getElementById('tab-home').classList.contains('active')) enfocarPrimerElemento('grid-latest');
+    }
+});
+
+function agregarHistorial(stateId) { 
+    if(window.location.hash !== `#${stateId}`) {
+        history.pushState({ page: stateId }, "", `#${stateId}`); 
+    }
+}
 
 // --- TABS ---
 function cambiarTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    
-    const tab = document.getElementById(`tab-${tabId}`);
-    if(tab) tab.classList.add('active');
-    
-    const btn = document.getElementById(`nav-${tabId}`);
-    if(btn) btn.classList.add('active');
-    
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+    document.getElementById(`nav-${tabId}`).classList.add('active');
     window.scrollTo(0, 0);
     
     if(tabId === 'history') { renderHistorial(); enfocarPrimerElemento('grid-history'); }
@@ -57,10 +78,24 @@ async function fetchData(endpoint) {
             if (!resp.ok) continue;
             let data = JSON.parse(await resp.text());
             if(data.contents) data = JSON.parse(data.contents);
-            return data.success ? data.data : null;
+            if (data.success) return data.data;
         } catch (e) {}
     }
     return null;
+}
+
+window.onload = () => { 
+    cargarEstrenos(); renderHistorial(); renderGeneros(); renderFavorites();
+    history.replaceState({ page: 'home' }, "", " "); 
+};
+
+// --- GÉNEROS ---
+function renderGeneros() {
+    const container = document.getElementById('genre-list'); if(!container) return; container.innerHTML = '';
+    const btnIsekai = document.createElement('button'); btnIsekai.className = 'genre-chip focusable'; btnIsekai.innerText = "Isekai"; btnIsekai.onclick = () => buscar("Isekai", true); container.appendChild(btnIsekai);
+    Object.keys(GENRE_MAP).forEach(label => {
+        const btn = document.createElement('button'); btn.className = 'genre-chip focusable'; btn.innerText = label; btn.onclick = () => buscar(label, false); container.appendChild(btn);
+    });
 }
 
 // --- HOME ---
@@ -74,7 +109,7 @@ async function cargarEstrenos() {
     }
 }
 
-// --- BUSCADOR (REPARADO) ---
+// --- BUSCADOR (REPARADO Y POTENCIADO) ---
 async function buscar(termino = null, esTexto = true) {
     let q = termino || document.getElementById('inp').value; if (!q) return;
     if (!termino) esTexto = true; else document.getElementById('inp').value = termino;
@@ -96,6 +131,7 @@ async function cargarMasResultados(limpiar = false) {
     } else { hasMoreResults = false; if (limpiar) grid.innerHTML = '<div class="placeholder-msg"><p>Sin resultados</p></div>'; }
     isLoadingMore = false;
 }
+// SCROLL INFINITO RESTAURADO
 window.addEventListener('scroll', () => {
     if(document.getElementById('tab-search').classList.contains('active')) {
         if (document.documentElement.scrollTop + document.documentElement.clientHeight >= document.documentElement.scrollHeight - 300 && hasMoreResults && !isLoadingMore) cargarMasResultados();
@@ -106,7 +142,18 @@ window.addEventListener('scroll', () => {
 function crearTarjeta(item, container, context) {
     const card = document.createElement('div'); card.className = 'anime-card focusable'; card.setAttribute('tabindex', '0');
     const img = item.cover || 'https://via.placeholder.com/150';
-    let meta = context === 'latest' ? `Ep ${item.number}` : (context === 'search' ? (item.type || 'Anime') : `Ep ${item.lastEp}`);
+    
+    // Lógica para mostrar info correcta en Buscador vs Estrenos
+    let meta = '';
+    if(context === 'latest') {
+        meta = `Ep ${item.number}`;
+    } else if(context === 'search') {
+        // En búsqueda mostramos el tipo (Anime/OVA) o los caps si existen
+        meta = item.type || (item.lastEp ? `Ep ${item.lastEp}` : 'Anime');
+    } else {
+        meta = item.lastEp ? `Ep ${item.lastEp}` : (item.type || 'Anime');
+    }
+
     card.innerHTML = `<img src="${img}" loading="lazy">${context === 'latest' ? '<div class="badge-new">NUEVO</div>' : ''}<div class="info"><span class="title">${item.title}</span><div class="meta">${meta}</div></div>`;
     
     card.onclick = () => {
@@ -125,6 +172,7 @@ function crearTarjeta(item, container, context) {
             cargarDetallesAnime(realSlug).then(()=>prepararReproductor(item.slug, item.title, item.lastEp, img)); 
         }
     };
+    // Soporte Tecla ENTER para TV
     card.onkeydown = (e) => { if (e.key === 'Enter') card.click(); };
     container.appendChild(card);
 }
@@ -145,7 +193,10 @@ async function cargarDetallesAnime(slug) {
     const info = await fetchData(`/anime/${slug}`);
     
     if(info) {
-        if (info.episodes) info.episodes.sort((a,b) => parseFloat(a.number) - parseFloat(b.number)); // Orden 1-2-3
+        // ORDEN CAPÍTULOS 1-2-3
+        if (info.episodes) {
+            info.episodes.sort((a,b) => parseFloat(a.number) - parseFloat(b.number));
+        }
 
         currentAnimeData = info; 
         document.getElementById('det-title').innerText = info.title;
@@ -162,6 +213,7 @@ async function cargarDetallesAnime(slug) {
 
         if(info.episodes.length > 0) {
             document.getElementById('btn-play-latest').onclick = () => {
+                // Último episodio (final del array ordenado)
                 const lastIndex = info.episodes.length - 1;
                 currentEpisodeIndex = lastIndex; 
                 const lastEp = info.episodes[lastIndex];
@@ -186,6 +238,8 @@ async function cargarDetallesAnime(slug) {
     }
 }
 
+function cerrarDetalles() { history.back(); }
+
 // --- REPRODUCTOR ---
 async function prepararReproductor(slug, title, number, cover) {
     agregarHistorial('player');
@@ -199,6 +253,8 @@ async function prepararReproductor(slug, title, number, cover) {
     marcarComoVisto(slug);
 
     const btnNext = document.getElementById('btn-next-ep');
+    
+    // Lógica Siguiente (ASCENDENTE)
     if (currentAnimeData && currentEpisodeIndex < currentAnimeData.episodes.length - 1) {
         btnNext.style.display = 'block';
         btnNext.onclick = () => {
@@ -235,37 +291,15 @@ async function prepararReproductor(slug, title, number, cover) {
             document.getElementById('server-list').appendChild(btn);
             if(i===0) btn.click();
         });
+        
         enfocarPrimerElemento('server-list');
     } else { document.getElementById('server-list').innerHTML = 'Error servidores'; }
 }
 
-// --- UTILS ---
-function cerrarDetalles() { history.back(); }
 function cerrarReproductor() { history.back(); }
 function abrirDetallesDesdePlayer() { history.back(); }
 
-function renderGeneros() {
-    const container = document.getElementById('genre-list'); if(!container) return; container.innerHTML = '';
-    const btnIsekai = document.createElement('button'); btnIsekai.className = 'genre-chip focusable'; btnIsekai.innerText = "Isekai"; btnIsekai.onclick = () => buscar("Isekai", true); container.appendChild(btnIsekai);
-    Object.keys(GENRE_MAP).forEach(label => {
-        const btn = document.createElement('button'); btn.className = 'genre-chip focusable'; btn.innerText = label; btn.onclick = () => buscar(label, false); container.appendChild(btn);
-    });
-}
-
-function renderHistorial() {
-    const grid = document.getElementById('grid-history');
-    const h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
-    grid.innerHTML = '';
-    h.reverse().forEach(i => crearTarjeta(i, grid, 'history'));
-}
-
-function renderFavorites() {
-    const grid = document.getElementById('grid-favorites');
-    const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
-    grid.innerHTML = '';
-    favs.forEach(item => crearTarjeta(item, grid, 'favorites'));
-}
-
+// --- FAVORITOS ---
 function toggleFavorite() {
     if(!currentAnimeData) return;
     let favs = JSON.parse(localStorage.getItem('favorites') || '[]');
@@ -285,12 +319,27 @@ function updateFavButton() {
     else { btn.innerHTML = "❤️ Agregar a Favoritos"; btn.classList.remove('is-fav'); }
 }
 
+function renderFavorites() {
+    const grid = document.getElementById('grid-favorites');
+    const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
+    grid.innerHTML = '';
+    if(favs.length === 0) grid.innerHTML = '<div class="placeholder-msg"><p>Sin favoritos</p></div>';
+    favs.forEach(item => crearTarjeta(item, grid, 'favorites'));
+}
+
+// --- HISTORIAL ---
 function marcarComoVisto(epSlug) {
     let list = JSON.parse(localStorage.getItem('watchedList') || '[]');
     if(!list.includes(epSlug)) list.push(epSlug);
     localStorage.setItem('watchedList', JSON.stringify(list));
 }
-
+function renderHistorial() {
+    const grid = document.getElementById('grid-history');
+    const h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
+    grid.innerHTML = '';
+    if(h.length===0) grid.innerHTML = '<div class="placeholder-msg"><p>Sin historial</p></div>';
+    h.reverse().forEach(i => crearTarjeta(i, grid, 'history'));
+}
 function guardarHistorial(i) {
     let h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     h = h.filter(x => x.animeSlug !== i.animeSlug);
@@ -299,64 +348,3 @@ function guardarHistorial(i) {
     localStorage.setItem('animeHistory', JSON.stringify(h));
 }
 function borrarHistorial() { if(confirm("¿Borrar?")) { localStorage.removeItem('animeHistory'); renderHistorial(); } }
-
-// --- BACKUP ---
-function exportData() {
-    const data = {
-        favorites: JSON.parse(localStorage.getItem('favorites') || '[]'),
-        history: JSON.parse(localStorage.getItem('animeHistory') || '[]'),
-        watched: JSON.parse(localStorage.getItem('watchedList') || '[]')
-    };
-    const blob = new Blob([JSON.stringify(data)], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = "whustaf-backup.json";
-    a.click();
-}
-
-function importData(input) {
-    const file = input.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const data = JSON.parse(e.target.result);
-            if(data.favorites) localStorage.setItem('favorites', JSON.stringify(data.favorites));
-            if(data.history) localStorage.setItem('animeHistory', JSON.stringify(data.history));
-            if(data.watched) localStorage.setItem('watchedList', JSON.stringify(data.watched));
-            alert("¡Datos restaurados!");
-            location.reload();
-        } catch(err) { alert("Error al leer archivo"); }
-    };
-    reader.readAsText(file);
-}
-
-// --- HISTORIAL NAV ---
-window.addEventListener('popstate', (event) => {
-    const hash = window.location.hash;
-    const player = document.getElementById('player-modal');
-    const details = document.getElementById('details-modal');
-
-    if (hash === '#player') {
-        player.style.display = 'flex';
-        details.style.display = 'none'; // Fix Doble
-        enfocarPrimerElemento('player-controls');
-    } else if (hash === '#details') {
-        player.style.display = 'none'; 
-        document.getElementById('video-wrapper').innerHTML = ''; 
-        details.style.display = 'block'; 
-        setTimeout(() => document.getElementById('btn-play-latest').focus(), 100);
-    } else {
-        player.style.display = 'none';
-        document.getElementById('video-wrapper').innerHTML = '';
-        details.style.display = 'none';
-        if(document.getElementById('tab-home').classList.contains('active')) enfocarPrimerElemento('grid-latest');
-    }
-});
-
-function agregarHistorial(stateId) { 
-    if(window.location.hash !== `#${stateId}`) {
-        history.pushState({ page: stateId }, "", `#${stateId}`); 
-    }
-}

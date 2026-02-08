@@ -15,9 +15,7 @@
         <header class="main-header">
             <div class="logo">WHUSTAF<span>TV</span></div>
             <button id="btn-install" class="install-btn focusable" style="display:none;">⬇ Instalar</button>
-            <button class="settings-btn focusable" onclick="cambiarTab('settings')">⚙️</button>
         </header>
-        
         <div class="content-body">
             <h2 class="section-title">🔥 Estrenos Recientes</h2>
             <div id="grid-latest" class="grid-container">
@@ -37,14 +35,21 @@
         </header>
         <div class="content-body" style="padding-top: 130px;">
             <div id="grid-search" class="grid-container">
-                <div class="placeholder-msg"><p>🔍</p><p>Busca un anime</p></div>
+                <div class="placeholder-msg">
+                    <p style="font-size: 3rem;">🔍</p>
+                    <p>Busca tus animes favoritos</p>
+                </div>
             </div>
         </div>
     </div>
 
     <div id="tab-favorites" class="tab-content">
-        <header class="main-header"><div class="header-title">❤️ Mis Favoritos</div></header>
-        <div class="content-body"><div id="grid-favorites" class="grid-container"></div></div>
+        <header class="main-header">
+            <div class="header-title">❤️ Mis Favoritos</div>
+        </header>
+        <div class="content-body">
+            <div id="grid-favorites" class="grid-container"></div>
+        </div>
     </div>
 
     <div id="tab-history" class="tab-content">
@@ -52,20 +57,8 @@
             <div class="header-title">🕒 Historial</div>
             <button class="clear-history focusable" onclick="borrarHistorial()">🗑️</button>
         </header>
-        <div class="content-body"><div id="grid-history" class="grid-container"></div></div>
-    </div>
-
-    <div id="tab-settings" class="tab-content">
-        <header class="main-header"><div class="header-title">⚙️ Configuración</div></header>
-        <div class="content-body settings-body">
-            <div class="settings-card">
-                <h3>Gestión de Datos</h3>
-                <p>Guarda tu progreso para no perderlo.</p>
-                <button class="primary-btn focusable" onclick="exportData()">📤 Guardar Copia</button>
-                <br><br>
-                <button class="fav-btn focusable" onclick="document.getElementById('file-input').click()">📥 Cargar Copia</button>
-                <input type="file" id="file-input" style="display:none" onchange="importData(this)">
-            </div>
+        <div class="content-body">
+            <div id="grid-history" class="grid-container"></div>
         </div>
     </div>
 
@@ -76,16 +69,21 @@
         </div>
         <div class="modal-content">
             <button class="close-modal-btn focusable" onclick="cerrarDetalles()">✕</button>
+            
             <div class="details-header">
                 <img id="det-img" src="" alt="Cover" class="cover-shadow">
                 <div class="details-info">
                     <h1 id="det-title">Cargando...</h1>
                     <div id="det-genres" class="badges"></div>
-                    <button id="btn-fav" class="fav-btn focusable" onclick="toggleFavorite()">❤️ Favoritos</button>
+                    <button id="btn-fav" class="fav-btn focusable" onclick="toggleFavorite()">
+                        ❤️ Agregar a Favoritos
+                    </button>
                     <p id="det-synopsis">...</p>
                 </div>
             </div>
-            <button id="btn-play-latest" class="primary-btn focusable">▶ Ver Capítulos</button>
+
+            <button id="btn-play-latest" class="primary-btn focusable">▶ Continuar Viendo</button>
+
             <h3 class="ep-list-title">Lista de Episodios</h3>
             <div id="det-episodes" class="episodes-grid"></div>
         </div>
@@ -94,12 +92,17 @@
     <div id="player-modal" class="player-modal">
         <div class="video-container">
             <div id="video-wrapper"></div>
-            <div class="player-controls" id="player-controls">
+            
+            <div class="player-controls">
                 <div class="player-header">
                     <h3 id="player-title">Reproduciendo...</h3>
-                    <button id="btn-next-ep" class="next-ep-btn focusable" style="display:none;">Siguiente ▶</button>
+                    <button id="btn-next-ep" class="next-ep-btn focusable" style="display:none;">
+                        Siguiente ▶
+                    </button>
                 </div>
+                
                 <div id="server-list" class="server-list"></div>
+                
                 <div class="player-actions">
                     <button class="control-btn focusable" onclick="abrirDetallesDesdePlayer()">📺 Capítulos</button>
                     <button class="control-btn focusable" onclick="cerrarReproductor()">✕ Cerrar</button>
@@ -108,11 +111,19 @@
         </div>
     </div>
 
-    <nav class="bottom-nav" id="main-nav">
-        <button onclick="cambiarTab('home')" class="nav-btn focusable active" id="nav-home"><span class="icon">🏠</span></button>
-        <button onclick="cambiarTab('search')" class="nav-btn focusable" id="nav-search"><span class="icon">🔍</span></button>
-        <button onclick="cambiarTab('favorites')" class="nav-btn focusable" id="nav-favorites"><span class="icon">❤️</span></button>
-        <button onclick="cambiarTab('history')" class="nav-btn focusable" id="nav-history"><span class="icon">🕒</span></button>
+    <nav class="bottom-nav">
+        <button onclick="cambiarTab('home')" class="nav-btn focusable active" id="nav-home">
+            <span class="icon">🏠</span> Inicio
+        </button>
+        <button onclick="cambiarTab('search')" class="nav-btn focusable" id="nav-search">
+            <span class="icon">🔍</span> Buscar
+        </button>
+        <button onclick="cambiarTab('favorites')" class="nav-btn focusable" id="nav-favorites">
+            <span class="icon">❤️</span> Favs
+        </button>
+        <button onclick="cambiarTab('history')" class="nav-btn focusable" id="nav-history">
+            <span class="icon">🕒</span> Historial
+        </button>
     </nav>
 
     <script src="app.js"></script>
