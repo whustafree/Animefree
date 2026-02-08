@@ -12,12 +12,12 @@
 <body>
 
     <div id="tab-home" class="tab-content active">
-        <header class="tab-header">
+        <header class="main-header">
             <div class="logo">WHUSTAF<span>TV</span></div>
             <button id="btn-install" class="install-btn" style="display:none;">⬇ Instalar</button>
         </header>
         <div class="content-body">
-            <h2 class="section-title">🔥 Lo Nuevo</h2>
+            <h2 class="section-title">🔥 Estrenos Recientes</h2>
             <div id="grid-latest" class="grid-container">
                 <div class="loader">Cargando estrenos...</div>
             </div>
@@ -25,26 +25,25 @@
     </div>
 
     <div id="tab-search" class="tab-content">
-        <header class="tab-header">
+        <header class="search-header-fixed">
             <div class="search-wrapper">
-                <input type="text" id="inp" placeholder="Escribe el nombre del anime..." autocomplete="off">
-                <button onclick="buscar()">Buscar</button>
+                <input type="text" id="inp" class="search-input focusable" placeholder="Buscar anime..." autocomplete="off">
+                <button class="search-btn focusable" onclick="buscar()">Buscar</button>
             </div>
         </header>
-        <div class="content-body">
-            <div id="grid-search" class="grid-container">
+        <div class="content-body" style="padding-top: 80px;"> <div id="grid-search" class="grid-container">
                 <div class="placeholder-msg">
-                    <span>🔍</span>
-                    <p>Aquí aparecerán tus búsquedas.</p>
+                    <p style="font-size: 3rem;">🔍</p>
+                    <p>Escribe el nombre de tu anime favorito.</p>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="tab-history" class="tab-content">
-        <header class="tab-header">
+        <header class="main-header">
             <div class="header-title">Tu Historial</div>
-            <button class="clear-btn" onclick="borrarHistorial()">Borrar Todo</button>
+            <button class="clear-history focusable" onclick="borrarHistorial()">🗑️ Borrar</button>
         </header>
         <div class="content-body">
             <div id="grid-history" class="grid-container"></div>
@@ -53,16 +52,17 @@
 
     <div id="details-modal" class="full-modal">
         <div class="modal-content">
-            <button class="close-modal-btn" onclick="cerrarDetalles()">✕</button>
+            <button class="close-modal-btn focusable" onclick="cerrarDetalles()">✕</button>
             <div class="details-header">
                 <img id="det-img" src="" alt="Cover">
                 <div class="details-info">
                     <h1 id="det-title">Título</h1>
                     <div id="det-genres" class="badges"></div>
                     <p id="det-synopsis">Sinopsis...</p>
-                    <button id="btn-play-latest" class="primary-btn">▶ Ver Último</button>
+                    <button id="btn-play-latest" class="primary-btn focusable">▶ Ver Último Capítulo</button>
                 </div>
             </div>
+            <h3 style="margin-top:20px; border-bottom:1px solid #333; padding-bottom:10px;">Lista de Episodios</h3>
             <div id="det-episodes" class="episodes-grid"></div>
         </div>
     </div>
@@ -71,24 +71,24 @@
         <div class="video-container">
             <div id="video-wrapper"></div>
             <div class="player-controls">
-                <h3 id="player-title"></h3>
+                <h3 id="player-title">Cargando...</h3>
                 <div id="server-list" class="server-list"></div>
                 <div class="player-actions">
-                    <button class="control-btn" onclick="abrirDetallesDesdePlayer()">📺 Capítulos</button>
-                    <button class="control-btn" onclick="cerrarReproductor()">✕ Cerrar</button>
+                    <button class="control-btn focusable" onclick="abrirDetallesDesdePlayer()">📺 Ver Capítulos</button>
+                    <button class="control-btn focusable" onclick="cerrarReproductor()">✕ Cerrar</button>
                 </div>
             </div>
         </div>
     </div>
 
     <nav class="bottom-nav">
-        <button onclick="cambiarTab('home')" class="nav-btn active" id="nav-home">
+        <button onclick="cambiarTab('home')" class="nav-btn focusable active" id="nav-home">
             <span class="icon">🏠</span> Inicio
         </button>
-        <button onclick="cambiarTab('search')" class="nav-btn" id="nav-search">
+        <button onclick="cambiarTab('search')" class="nav-btn focusable" id="nav-search">
             <span class="icon">🔍</span> Buscar
         </button>
-        <button onclick="cambiarTab('history')" class="nav-btn" id="nav-history">
+        <button onclick="cambiarTab('history')" class="nav-btn focusable" id="nav-history">
             <span class="icon">🕒</span> Historial
         </button>
     </nav>
