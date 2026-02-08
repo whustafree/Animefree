@@ -2,41 +2,50 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Animofree PWA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Akiyama Lite</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff4500">
-    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="theme-color" content="#121212">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3504/3504827.png">
 </head>
 <body>
-    <header>
-        <h1>Whustaf Anime</h1>
-        <div class="search-box">
-            <input type="text" id="inp" placeholder="Buscar anime...">
-            <button onclick="buscar()">🔍</button>
+
+    <header class="app-header">
+        <div class="logo">AKIYAMA</div>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Buscar anime...">
+            <button onclick="buscarAnime()">🔍</button>
         </div>
     </header>
 
-    <main id="grid" class="anime-grid">
-        <div class="loader">Iniciando sistema...</div>
+    <main id="contentArea">
+        <h2 class="section-title">Últimos Episodios</h2>
+        <div id="animeGrid" class="grid-container">
+            <div class="loader">Cargando cartelera...</div>
+        </div>
     </main>
 
-    <div id="modal">
-        <span class="close" onclick="cerrarModal()">&times;</span>
-        <h3 id="mTitle"></h3>
-        <div id="mEps" class="ep-list"></div>
-        <div id="mLinks"></div>
+    <div id="animeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="cerrarModal()">&times;</span>
+            <h2 id="modalTitle">Título</h2>
+            <div id="modalEpisodes" class="episodes-list"></div>
+            <div id="modalLinks" class="links-list"></div>
+        </div>
     </div>
 
-    <div id="debug-console"></div>
+    <nav class="bottom-nav">
+        <button onclick="cargarInicio()" class="active">🏠 Inicio</button>
+        <button onclick="document.getElementById('searchInput').focus()">🔍 Buscar</button>
+        <button onclick="location.reload()">🔄 Recargar</button>
+    </nav>
 
     <script src="app.js"></script>
     <script>
-        // Registro del Service Worker para la PWA
+        // Registrar Service Worker para que sea App
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log("Service Worker Registrado"));
+            navigator.serviceWorker.register('sw.js').catch(console.error);
         }
     </script>
 </body>
