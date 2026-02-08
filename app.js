@@ -1,97 +1,97 @@
 const consoleDiv = document.getElementById('debug-console');
 
-// --- SISTEMA DE LOGS DETALLADO ---
+// --- SISTEMA DE LOGS ---
 function log(msg, type = 'info') {
     const d = document.createElement('div');
-    d.style.marginBottom = "3px";
-    d.style.borderLeft = "3px solid";
+    d.style.marginBottom = "2px";
     d.style.paddingLeft = "5px";
-    const time = new Date().toLocaleTimeString();
+    d.style.fontSize = "11px";
     
-    switch(type) {
-        case 'error': 
-            d.style.color = '#ff5555'; 
-            d.style.borderLeftColor = '#ff0000';
-            break;
-        case 'success': 
-            d.style.color = '#55ff55'; 
-            d.style.borderLeftColor = '#00ff00';
-            break;
-        case 'warn': 
-            d.style.color = '#ffff55'; 
-            d.style.borderLeftColor = '#ffff00';
-            break;
-        default: 
-            d.style.color = '#00d4ff'; 
-            d.style.borderLeftColor = '#00d4ff';
-    }
+    // Colores tipo Hacker
+    if (type === 'error') d.style.color = '#ff5555';
+    else if (type === 'success') d.style.color = '#55ff55';
+    else if (type === 'warn') d.style.color = '#ffff55';
+    else d.style.color = '#00d4ff';
 
+    const time = new Date().toLocaleTimeString().split(' ')[0];
     d.innerText = `[${time}] ${msg}`;
     consoleDiv.appendChild(d);
     consoleDiv.scrollTop = consoleDiv.scrollHeight;
 }
 
-// --- FUNCIÓN DE LLAMADA CON ROTACIÓN DE PROXIES (ANTI-CORS) ---
+// --- LÓGICA DE CONEXIÓN ROBUSTA ---
 async function call(path) {
     const targetUrl = `https://api.consumet.org/anime/animeflv/${path}`;
     
-    // Lista de proxies para intentar saltar el bloqueo de GitHub Pages
+    // Usamos 'raw' en allorigins para recibir JSON directo y evitar errores de parseo
+    // Añadimos un timestamp para evitar que el celular guarde caché vieja
+    const timeStamp = new Date().getTime();
+    
     const proxies = [
-        `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}&t=${timeStamp}`,
         `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
         `https://thingproxy.freeboard.io/fetch/${targetUrl}`
     ];
 
-    log(`Iniciando petición a: /${path}`, 'warn');
+    log(`Pidiendo datos...`, 'warn');
 
     for (const proxyUrl of proxies) {
         try {
-            const host = new URL(proxyUrl).hostname;
-            log(`Probando proxy: ${host}...`, 'info');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos de espera máx
+
+            const response = await fetch(proxyUrl, {
+                method: 'GET',
+                signal: controller.signal,
+                referrerPolicy: 'no-referrer' // <--- ESTO ES CLAVE PARA CELULARES
+            });
             
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            clearTimeout(timeoutId);
 
-            const textData = await response.text();
-            let finalData;
-
-            // AllOrigins devuelve un objeto con .contents, otros el JSON directo
-            try {
-                const json = JSON.parse(textData);
-                finalData = json.contents ? JSON.parse(json.contents) : json;
-            } catch (e) {
-                // Si falla el primer parseo, intentamos el texto directo
-                finalData = JSON.parse(textData);
+            if (!response.ok) {
+                log(`Proxy devolvió error: ${response.status}`, 'warn');
+                continue;
             }
 
-            log(`¡Éxito con ${host}!`, 'success');
-            return finalData;
+            const data = await response.json();
+            
+            // Verificamos si la respuesta tiene sentido
+            if (data.results || data.episodes || data.sources) {
+                log(`¡Conexión exitosa!`, 'success');
+                return data; // Devolvemos el JSON limpio
+            } else if (data.contents) {
+                // A veces AllOrigins devuelve el JSON dentro de 'contents'
+                return JSON.parse(data.contents);
+            }
 
         } catch (error) {
-            log(`Fallo proxy ${new URL(proxyUrl).hostname}: ${error.message}`, 'error');
-            // Continúa al siguiente proxy en el bucle
+            log(`Intento fallido: ${error.message}`, 'error');
         }
     }
 
-    log("TODOS LOS PROXIES FALLARON. La API podría estar caída.", "error");
+    log("ERROR FATAL: No se pudo conectar a ninguna API.", 'error');
     return null;
 }
 
-// --- LÓGICA DE RENDERIZADO Y CONTROL ---
-
+// --- INTERFAZ ---
 async function init() {
-    log("Cargando cartelera de estrenos...", "info");
+    log("Iniciando sistema...", "info");
     const data = await call("recent-episodes");
+    
     if (data && data.results) {
         render(data.results);
+    } else {
+        document.getElementById('grid').innerHTML = '<div style="text-align:center; padding:20px;">Servidores ocupados. Intenta recargar en 1 minuto.</div>';
     }
 }
 
 async function buscar() {
     const q = document.getElementById('inp').value;
-    if (!q) return log("Ingresa un nombre para buscar", "warn");
-    log(`Buscando: "${q}"`, "info");
+    if (!q) return;
+    
+    log(`Buscando: ${q}`, "info");
     const data = await call(q);
+    
     if (data && data.results) {
         render(data.results);
     }
@@ -101,19 +101,14 @@ function render(list) {
     const g = document.getElementById('grid');
     g.innerHTML = '';
     
-    if (!list || list.length === 0) {
-        log("No hay resultados para mostrar", "warn");
-        return;
-    }
-
     list.forEach(a => {
         const c = document.createElement('div');
         c.className = 'anime-card';
-        // Usamos images.weserv.nl para evitar bloqueos de imágenes (Hotlinking)
-        const proxyImg = `https://images.weserv.nl/?url=${encodeURIComponent(a.image)}`;
+        // Proxy de imágenes para que se vean siempre
+        const imgUrl = `https://images.weserv.nl/?url=${encodeURIComponent(a.image)}`;
         
         c.innerHTML = `
-            <img src="${proxyImg}" loading="lazy" onerror="this.src='https://via.placeholder.com/140x200?text=No+Image'">
+            <img src="${imgUrl}" loading="lazy" onerror="this.src='https://via.placeholder.com/140x200?text=Error+Img'">
             <div>${a.title}</div>
         `;
         c.onclick = () => loadAnime(a.id, a.title);
@@ -122,54 +117,56 @@ function render(list) {
 }
 
 async function loadAnime(id, title) {
-    log(`Abriendo: ${title}`, "info");
     document.getElementById('modal').style.display = 'flex';
     document.getElementById('mTitle').innerText = title;
-    document.getElementById('mEps').innerHTML = 'Cargando episodios...';
+    document.getElementById('mEps').innerHTML = 'Cargando lista...';
     document.getElementById('mLinks').innerHTML = '';
     
     const data = await call(`info?id=${id}`);
+    
     if (data && data.episodes) {
         const container = document.getElementById('mEps');
         container.innerHTML = '';
-        data.episodes.forEach(e => {
+        // Invertimos para que el cap 1 salga primero (opcional)
+        data.episodes.reverse().forEach(e => {
             const b = document.createElement('div');
             b.className = 'ep-btn';
             b.innerText = e.number;
             b.onclick = () => loadLinks(e.id);
             container.appendChild(b);
         });
-        log(`${data.episodes.length} episodios encontrados.`, "success");
+        log(`Cargados ${data.episodes.length} episodios.`, 'success');
     }
 }
 
 async function loadLinks(id) {
-    log(`Buscando video para ep: ${id}`, "info");
+    log(`Buscando video...`, 'info');
+    document.getElementById('mLinks').innerHTML = 'Conectando con servidor de video...';
+    
     const data = await call(`watch?episodeId=${id}`);
     const cont = document.getElementById('mLinks');
-    cont.innerHTML = 'Obteniendo links...';
+    cont.innerHTML = '';
     
     if (data && data.sources) {
-        cont.innerHTML = '';
         data.sources.forEach(s => {
             const b = document.createElement('button');
-            b.innerText = `Calidad: ${s.quality}`;
+            b.innerText = `Ver en ${s.quality}`;
             b.style.display = "block";
-            b.style.margin = "10px auto";
-            b.style.padding = "12px";
             b.style.width = "100%";
-            b.style.background = "#333";
+            b.style.padding = "15px";
+            b.style.margin = "5px 0";
+            b.style.background = "#ff4500";
             b.style.color = "white";
-            b.style.border = "1px solid #ff4500";
-            b.style.borderRadius = "5px";
-            b.onclick = () => {
-                log(`Abriendo servidor ${s.quality}`, "success");
-                window.open(s.url, '_blank');
-            };
+            b.style.border = "none";
+            b.style.borderRadius = "8px";
+            b.style.fontSize = "16px";
+            b.onclick = () => window.location.href = s.url; // Abre directo en el reproductor del cel
             cont.appendChild(b);
         });
+        log("¡Enlace encontrado!", 'success');
     } else {
-        cont.innerHTML = 'No se encontraron links.';
+        cont.innerHTML = 'No se encontraron enlaces.';
+        log("Sin enlaces disponibles.", 'error');
     }
 }
 
@@ -177,7 +174,9 @@ function cerrarModal() {
     document.getElementById('modal').style.display = 'none'; 
 }
 
-// Errores globales de JS
-window.onerror = (m, s, l) => log(`JS ERROR: ${m} en línea ${l}`, 'error');
+// Manejo de errores globales
+window.onerror = function(msg) {
+    log(`JS Error: ${msg}`, 'error');
+};
 
 window.onload = init;
