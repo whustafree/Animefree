@@ -1,234 +1,237 @@
-// CONFIGURACIÓN API (AHMED RANGEL)
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
+const PROXIES = [ (u)=>u, (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, (u)=>`https://corsproxy.io/?${encodeURIComponent(u)}` ];
 
-// PROXIES (Invisibles)
-const PROXIES = [
-    (url) => url, // Directo
-    (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
-];
+// VARIABLE GLOBAL PARA GUARDAR EL ANIME ACTUAL (Para volver desde el player)
+let currentAnimeSlug = null;
 
-// --- FUNCIONES CORE ---
 async function fetchData(endpoint) {
-    const targetUrl = `${API_BASE}${endpoint}`;
     for (const wrap of PROXIES) {
         try {
-            const resp = await fetch(wrap(targetUrl));
+            const resp = await fetch(wrap(API_BASE + endpoint));
             if (!resp.ok) continue;
-            
             const text = await resp.text();
-            let data;
-            try { data = JSON.parse(text); if(data.contents) data = JSON.parse(data.contents); } 
-            catch(e) { continue; }
-            
+            let data = JSON.parse(text);
+            if(data.contents) data = JSON.parse(data.contents);
             if (data.success) return data.data;
         } catch (e) {}
     }
     return null;
 }
 
-// --- INICIO ---
-window.onload = () => {
-    cargarEstrenos();
-    renderHistorial();
-};
+window.onload = () => { cargarEstrenos(); renderHistorial(); };
 
-function cambiarVista(vistaName) {
+// --- NAVEGACIÓN ---
+function cambiarVista(id) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    
-    document.getElementById(`view-${vistaName}`).classList.add('active');
-    if(document.getElementById(`btn-${vistaName}`)) {
-        document.getElementById(`btn-${vistaName}`).classList.add('active');
-    }
-    
-    if (vistaName === 'history') renderHistorial();
+    document.getElementById(`view-${id}`).classList.add('active');
+    document.getElementById(`btn-${id}`).classList.add('active');
+    if(id === 'history') renderHistorial();
 }
-
 function toggleSearch() {
     const el = document.getElementById('searchContainer');
-    if (el.style.display === 'flex') el.style.display = 'none';
-    else el.style.display = 'flex';
+    el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+    if(el.style.display === 'flex') document.getElementById('inp').focus();
 }
 
-// --- LOGICA DE ESTRENOS (VISTA 1) ---
+// --- LOGICA PRINCIPAL ---
 async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
     const data = await fetchData('/list/latest-episodes');
-    
-    if (data) {
-        grid.innerHTML = '';
-        data.forEach(item => {
-            crearTarjeta(item, grid, true);
-        });
-    } else {
-        grid.innerHTML = '<div class="empty-msg">Error de conexión.</div>';
-    }
-}
-
-// --- LOGICA DE HISTORIAL (VISTA 2) ---
-function renderHistorial() {
-    const grid = document.getElementById('grid-history');
-    const history = JSON.parse(localStorage.getItem('animeHistory') || '[]');
-    
-    if (history.length === 0) {
-        grid.innerHTML = '<div class="empty-msg">Aquí aparecerán los animes que veas.</div>';
-        return;
-    }
-    
     grid.innerHTML = '';
-    // Mostrar del más reciente al más antiguo
-    history.reverse().forEach(item => {
-        crearTarjeta(item, grid, false, true);
-    });
+    if (data) data.forEach(item => crearTarjeta(item, grid, 'latest'));
+    else grid.innerHTML = '<div style="padding:20px">Error de conexión</div>';
 }
 
-function guardarHistorial(anime) {
-    let history = JSON.parse(localStorage.getItem('animeHistory') || '[]');
-    // Eliminar si ya existe para ponerlo primero
-    history = history.filter(h => h.slug !== anime.slug);
-    // Agregar al inicio
-    history.push(anime);
-    // Guardar máx 50 items
-    if (history.length > 50) history.shift();
-    localStorage.setItem('animeHistory', JSON.stringify(history));
-}
-
-function borrarHistorial() {
-    if(confirm("¿Borrar todo el historial?")) {
-        localStorage.removeItem('animeHistory');
-        renderHistorial();
-    }
-}
-
-// --- UI COMPONENTS ---
-function crearTarjeta(item, container, esEstreno = false, esHistorial = false) {
-    const card = document.createElement('div');
-    card.className = 'anime-card';
-    
-    const img = item.cover || 'https://via.placeholder.com/150';
-    const title = item.title;
-    // Si es estreno, viene con 'number'. Si es historial, puede variar.
-    const epNum = item.number || item.lastEp || '?';
-    
-    let badgeHTML = '';
-    if (esEstreno) badgeHTML = '<div class="badge-new">NUEVO</div>';
-    
-    card.innerHTML = `
-        <img src="${img}" loading="lazy">
-        ${badgeHTML}
-        <div class="info">
-            <span class="title">${title}</span>
-            <div class="meta">
-                ${esEstreno ? 'Episodio ' + epNum : 'Visto: Ep ' + epNum}
-            </div>
-        </div>
-    `;
-    
-    // Al hacer click, reproducir
-    card.onclick = () => {
-        // Si es estreno, item tiene slug del episodio. Si no, construimos.
-        const slug = item.slug; 
-        prepararReproductor(slug, title, epNum, img);
-    };
-    
-    container.appendChild(card);
-}
-
-// --- BÚSQUEDA ---
 async function buscar() {
     const q = document.getElementById('inp').value;
     if (!q) return;
-    
     cambiarVista('search');
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader">Buscando...</div>';
     
     const data = await fetchData(`/search?query=${encodeURIComponent(q)}`);
-    
     grid.innerHTML = '';
+    
     if (data && data.media) {
-        data.media.forEach(anime => {
-            // Tarjetas de búsqueda llevan a detalles (simplificado: reproducir ultimo ep o lista)
-            // Por simplicidad en esta versión, intentaremos reproducir el último disponible
-            // Ojo: La API de búsqueda devuelve animes, no episodios.
-            // Para "hacerlo simple", al buscar y hacer click, buscaremos el cap 1 o el ultimo.
-            // Aquí haremos una tarjeta simple.
-            
-            const card = document.createElement('div');
-            card.className = 'anime-card';
-            card.innerHTML = `
-                <img src="${anime.cover}" loading="lazy">
-                <div class="info">
-                    <span class="title">${anime.title}</span>
-                    <div class="meta">${anime.type || 'Anime'}</div>
-                </div>
-            `;
-            // Al buscar, vamos a intentar ver el cap 1 (Fix rápido)
-            card.onclick = () => {
-                 // Convertimos slug de anime a slug de ep 1 (generalmente es slug-1)
-                 // Esto es un hack, lo ideal es una vista de detalles.
-                 const epSlug = `${anime.slug}-1`;
-                 prepararReproductor(epSlug, anime.title, "1", anime.cover);
-            };
-            grid.appendChild(card);
-        });
+        data.media.forEach(anime => crearTarjeta(anime, grid, 'search'));
     } else {
-        grid.innerHTML = '<div class="empty-msg">No encontrado.</div>';
+        grid.innerHTML = '<div style="padding:20px">No encontrado</div>';
     }
 }
 
-// --- REPRODUCTOR DE VIDEO ---
-async function prepararReproductor(slug, title, number, cover) {
-    const modal = document.getElementById('player-modal');
-    const wrapper = document.getElementById('video-wrapper');
-    const list = document.getElementById('server-list');
+// --- CREAR TARJETAS (Inteligente) ---
+function crearTarjeta(item, container, context) {
+    const card = document.createElement('div');
+    card.className = 'anime-card focusable';
+    // Para TV: Tabindex permite navegar con flechas
+    card.setAttribute('tabindex', '0'); 
     
-    modal.style.display = 'flex';
+    const img = item.cover || 'https://via.placeholder.com/150';
+    const title = item.title;
+    let meta = '';
+
+    if (context === 'latest') meta = `Episodio ${item.number}`;
+    else if (context === 'search') meta = item.type || 'Anime';
+    else meta = `Visto: Ep ${item.lastEp}`;
+
+    card.innerHTML = `
+        <img src="${img}" loading="lazy">
+        ${context === 'latest' ? '<div class="badge-new">NUEVO</div>' : ''}
+        <div class="info">
+            <span class="title">${title}</span>
+            <div class="meta">${meta}</div>
+        </div>
+    `;
+
+    // ACCIONES AL CLIC
+    card.onclick = () => {
+        if (context === 'search') {
+            // Desde búsqueda: Abrir ficha de detalles
+            cargarDetallesAnime(item.slug);
+        } else if (context === 'latest') {
+            // Desde estrenos: Reproducir directo, PERO guardamos slug para ver más
+            // El item de latest no trae slug de anime limpio, trae slug de episodio.
+            // Truco: slug episodio es "nombre-anime-numero".
+            const partes = item.slug.split('-');
+            partes.pop(); // quitar numero
+            currentAnimeSlug = partes.join('-'); 
+            
+            prepararReproductor(item.slug, item.title, item.number, img);
+        } else {
+            // Historial
+            prepararReproductor(item.slug, item.title, item.lastEp, img);
+            currentAnimeSlug = item.animeSlug; // Recuperamos slug guardado
+        }
+    };
+    
+    // Soporte TV Enter
+    card.onkeydown = (e) => { if(e.key === 'Enter') card.click(); };
+    
+    container.appendChild(card);
+}
+
+// --- DETALLES DE ANIME (Lo nuevo) ---
+async function cargarDetallesAnime(slug) {
+    currentAnimeSlug = slug; // Guardar referencia
+    const modal = document.getElementById('details-modal');
+    modal.style.display = 'block';
+    
+    // Limpiar UI anterior
+    document.getElementById('det-title').innerText = 'Cargando...';
+    document.getElementById('det-episodes').innerHTML = '<div class="loader">...</div>';
+    
+    const info = await fetchData(`/anime/${slug}`);
+    
+    if (info) {
+        document.getElementById('det-title').innerText = info.title;
+        document.getElementById('det-synopsis').innerText = info.synopsis || "Sin sinopsis.";
+        document.getElementById('det-img').src = info.cover;
+        
+        // Géneros
+        const genresDiv = document.getElementById('det-genres');
+        genresDiv.innerHTML = info.genres.map(g => `<span>${g}</span>`).join('');
+        
+        // Lista Episodios
+        const epList = document.getElementById('det-episodes');
+        epList.innerHTML = '';
+        
+        if (info.episodes && info.episodes.length > 0) {
+            // Botón reproducir último
+            const lastEp = info.episodes[0];
+            const btnPlay = document.getElementById('btn-play-latest');
+            btnPlay.onclick = () => prepararReproductor(lastEp.slug, info.title, lastEp.number, info.cover);
+            
+            info.episodes.forEach(ep => {
+                const btn = document.createElement('div');
+                btn.className = 'ep-card focusable';
+                btn.setAttribute('tabindex', '0');
+                btn.innerText = `Episodio ${ep.number}`;
+                btn.onclick = () => prepararReproductor(ep.slug, info.title, ep.number, info.cover);
+                btn.onkeydown = (e) => { if(e.key === 'Enter') btn.click(); };
+                epList.appendChild(btn);
+            });
+        }
+    }
+}
+
+function cerrarDetalles() { document.getElementById('details-modal').style.display = 'none'; }
+
+// --- REPRODUCTOR ---
+async function prepararReproductor(slug, title, number, cover) {
+    document.getElementById('player-modal').style.display = 'flex';
     document.getElementById('player-title').innerText = `${title} - Ep ${number}`;
-    wrapper.innerHTML = ''; // Limpiar video anterior
+    document.getElementById('video-wrapper').innerHTML = '';
+    
+    // Guardar Historial
+    if (currentAnimeSlug) {
+        guardarHistorial({ 
+            animeSlug: currentAnimeSlug, // Guardamos slug del anime para volver
+            slug: slug, // Slug del episodio
+            title: title, 
+            lastEp: number, 
+            cover: cover 
+        });
+    }
+
+    const list = document.getElementById('server-list');
     list.innerHTML = 'Cargando servidores...';
     
-    // Guardar en historial
-    guardarHistorial({ slug: slug, title: title, lastEp: number, cover: cover });
-
     const data = await fetchData(`/anime/episode/${slug}`);
-    
     list.innerHTML = '';
+
     if (data && data.servers) {
-        data.servers.forEach((server, index) => {
+        data.servers.forEach((s, i) => {
             const btn = document.createElement('button');
-            btn.className = 'server-btn';
-            btn.innerText = server.name;
-            
-            // Preferir embed
-            const url = server.embed || server.code || server.url;
+            btn.className = 'focusable';
+            btn.setAttribute('tabindex', '0');
+            btn.innerText = s.name;
+            const url = s.embed || s.code || s.url;
             
             btn.onclick = () => {
-                document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.server-list button').forEach(b=>b.classList.remove('active'));
                 btn.classList.add('active');
-                cargarVideoEnIframe(url);
+                document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" allowfullscreen allow="autoplay"></iframe>`;
             };
-            
             list.appendChild(btn);
-            
-            // Cargar el primero automáticamente
-            if (index === 0) btn.click();
+            if(i===0) btn.click(); // Auto-play primero
         });
     } else {
-        list.innerHTML = 'No se encontraron servidores.';
+        list.innerHTML = 'Error: No hay servidores.';
     }
 }
 
-function cargarVideoEnIframe(url) {
-    const wrapper = document.getElementById('video-wrapper');
-    wrapper.innerHTML = `<iframe src="${url}" allowfullscreen scrolling="no" allow="autoplay; encrypted-media"></iframe>`;
+function abrirDetallesDesdePlayer() {
+    cerrarReproductor();
+    if (currentAnimeSlug) {
+        cargarDetallesAnime(currentAnimeSlug);
+    } else {
+        alert("No se pudo identificar el anime. Búscalo en el buscador.");
+    }
 }
 
 function cerrarReproductor() {
     document.getElementById('player-modal').style.display = 'none';
-    document.getElementById('video-wrapper').innerHTML = ''; // Detener video
-    renderHistorial(); // Actualizar vista historial
+    document.getElementById('video-wrapper').innerHTML = '';
+    renderHistorial();
 }
 
+// --- HISTORIAL ---
+function renderHistorial() {
+    const grid = document.getElementById('grid-history');
+    const h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
+    grid.innerHTML = '';
+    if(h.length === 0) grid.innerHTML = '<div style="padding:20px; color:#555">Historial vacío</div>';
+    h.reverse().forEach(item => crearTarjeta(item, grid, 'history'));
+}
+function guardarHistorial(item) {
+    let h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
+    h = h.filter(x => x.animeSlug !== item.animeSlug); // Evitar duplicados del mismo anime
+    h.push(item);
+    if(h.length > 20) h.shift();
+    localStorage.setItem('animeHistory', JSON.stringify(h));
+}
+function borrarHistorial() { 
+    if(confirm("¿Borrar historial?")) { localStorage.removeItem('animeHistory'); renderHistorial(); } 
+}
 function recargar() { location.reload(); }
