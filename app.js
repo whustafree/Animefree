@@ -1,5 +1,4 @@
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
-// Proxies rotativos
 const PROXIES = [ 
     (u) => u, 
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, 
@@ -8,7 +7,7 @@ const PROXIES = [
 
 let currentAnimeSlug = null;
 
-// --- HISTORIAL Y GESTOS ---
+// --- HISTORIAL ---
 window.addEventListener('popstate', (event) => {
     const player = document.getElementById('player-modal');
     const details = document.getElementById('details-modal');
@@ -27,7 +26,6 @@ window.addEventListener('popstate', (event) => {
         search.style.display = 'none';
         return;
     }
-    // Si estamos en búsqueda, volver a inicio
     const searchView = document.getElementById('view-search');
     if (searchView && searchView.classList.contains('active')) {
         cambiarVista('home');
@@ -60,22 +58,18 @@ window.onload = () => {
     history.replaceState({ page: 'home' }, "", "");
 };
 
-// --- NAVEGACIÓN (CON FIX DE SCROLL) ---
+// --- NAVEGACIÓN ---
 function cambiarVista(id) {
-    // 1. Ocultar vistas
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     
-    // 2. Mostrar vista nueva
     const view = document.getElementById(`view-${id}`);
     if (view) view.classList.add('active');
 
-    // 3. Activar botón del menú (si existe)
     const btn = document.getElementById(`btn-${id}`);
     if (btn) btn.classList.add('active');
     
-    // 4. ¡EL ARREGLO! Forzar subir al inicio de la página
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll arriba automático
 
     if(id === 'history') renderHistorial();
 }
@@ -108,7 +102,7 @@ async function buscar() {
     document.getElementById('searchContainer').style.display = 'none';
     document.getElementById('inp').blur();
 
-    cambiarVista('search'); // Esto ahora subirá la pantalla automáticamente
+    cambiarVista('search');
     
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader">Buscando...</div>';
@@ -170,8 +164,6 @@ async function cargarDetallesAnime(slug) {
 
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
-    
-    // Forzar scroll arriba dentro del modal también
     modal.scrollTop = 0;
     
     document.getElementById('det-title').innerText = 'Cargando...';
@@ -210,7 +202,7 @@ async function cargarDetallesAnime(slug) {
 
 function cerrarDetalles() { history.back(); }
 
-// --- REPRODUCTOR CON BLOQUEO DE ANUNCIOS ---
+// --- REPRODUCTOR (ORDEN INTELIGENTE) ---
 async function prepararReproductor(slug, title, number, cover) {
     agregarHistorial('player');
     const modal = document.getElementById('player-modal');
@@ -229,6 +221,15 @@ async function prepararReproductor(slug, title, number, cover) {
     list.innerHTML = '';
 
     if (data && data.servers) {
+        // ORDENAR SERVIDORES: Ponemos los más limpios primero
+        const prioridad = ["Okru", "YourUpload", "Maru", "Netu", "Streamwish", "Mega"];
+        data.servers.sort((a, b) => {
+            const pA = prioridad.indexOf(a.name);
+            const pB = prioridad.indexOf(b.name);
+            // Si no está en la lista, va al final (99)
+            return (pA === -1 ? 99 : pA) - (pB === -1 ? 99 : pB);
+        });
+
         data.servers.forEach((s, i) => {
             const btn = document.createElement('button');
             btn.className = 'focusable';
@@ -240,14 +241,15 @@ async function prepararReproductor(slug, title, number, cover) {
                 document.querySelectorAll('.server-list button').forEach(b=>b.classList.remove('active'));
                 btn.classList.add('active');
                 
-                // AQUÍ ESTÁ LA MAGIA: sandbox sin 'allow-popups'
-                // Esto bloquea que se abran pestañas nuevas al hacer clic
-                const iframeHTML = `<iframe src="${url}" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation"></iframe>`;
+                // RESTAURAMOS EL VIDEO NORMAL (Sin Sandbox estricto)
+                // Usamos 'allow-popups' para que no se bloquee, pero...
+                // ...el bloqueo real lo haremos con el TRUCO DEL DNS (ver abajo)
+                const iframeHTML = `<iframe src="${url}" allowfullscreen allow="autoplay; encrypted-media; fullscreen"></iframe>`;
                 
                 document.getElementById('video-wrapper').innerHTML = iframeHTML;
             };
             list.appendChild(btn);
-            if(i===0) btn.click();
+            if(i===0) btn.click(); // Autoplay con el mejor servidor
         });
     } else {
         list.innerHTML = 'Error: No hay servidores.';
