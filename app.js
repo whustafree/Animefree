@@ -1,60 +1,40 @@
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
-const PROXIES = [ 
-    (u) => u, 
-    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, 
-    (u) => `https://corsproxy.io/?${encodeURIComponent(u)}` 
-];
+const PROXIES = [ (u)=>u, (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, (u)=>`https://corsproxy.io/?${encodeURIComponent(u)}` ];
 let currentAnimeSlug = null;
 let deferredPrompt;
+
+// --- LISTA DE GÉNEROS ---
+const GENEROS = [
+    "Isekai", "Ecchi", "Terror", "Gore", "Acción", "Romance", 
+    "Comedia", "Fantasía", "Harem", "Seinen", "Shonen", "Hentai"
+];
 
 // --- INSTALACIÓN ---
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); deferredPrompt = e;
     const btn = document.getElementById('btn-install');
-    if(btn) { 
-        btn.style.display = 'inline-block'; 
-        btn.onclick = () => { btn.style.display = 'none'; deferredPrompt.prompt(); }; 
-    }
+    if(btn) { btn.style.display = 'inline-block'; btn.onclick = () => { btn.style.display = 'none'; deferredPrompt.prompt(); }; }
 });
 
-// --- HISTORIAL DE NAVEGACIÓN ---
+// --- HISTORIAL ---
 window.addEventListener('popstate', () => {
-    // 1. Cerrar modales si están abiertos
-    if(document.getElementById('player-modal').style.display === 'flex') { 
-        cerrarReproductor(); return; 
-    }
-    if(document.getElementById('details-modal').style.display === 'block') { 
-        cerrarDetalles(); return; 
-    }
-    
-    // 2. Si estamos en una pestaña que no es Home, volver a Home
-    if(!document.getElementById('tab-home').classList.contains('active')) { 
-        cambiarTab('home'); 
-    }
+    if(document.getElementById('player-modal').style.display === 'flex') { cerrarReproductor(); return; }
+    if(document.getElementById('details-modal').style.display === 'block') { cerrarDetalles(); return; }
+    if(!document.getElementById('tab-home').classList.contains('active')) { cambiarTab('home'); }
 });
-function agregarHistorial(stateId) { 
-    history.pushState({ page: stateId }, "", `#${stateId}`); 
-}
+function agregarHistorial(stateId) { history.pushState({ page: stateId }, "", `#${stateId}`); }
 
-// --- NAVEGACIÓN PESTAÑAS ---
+// --- NAVEGACIÓN ---
 function cambiarTab(tabId) {
-    // Ocultar todo
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    
-    // Mostrar selección
     document.getElementById(`tab-${tabId}`).classList.add('active');
     document.getElementById(`nav-${tabId}`).classList.add('active');
-    
-    // Scroll arriba
     window.scrollTo(0, 0);
-
-    // Acciones especiales
     if(tabId === 'history') renderHistorial();
-    if(tabId === 'search') document.getElementById('inp').focus();
 }
 
-// --- CORE FETCH ---
+// --- CORE ---
 async function fetchData(endpoint) {
     for (const wrap of PROXIES) {
         try {
@@ -71,8 +51,25 @@ async function fetchData(endpoint) {
 window.onload = () => { 
     cargarEstrenos(); 
     renderHistorial();
+    renderGeneros(); // <--- CARGAMOS LOS BOTONES
     history.replaceState({ page: 'home' }, "", ""); 
 };
+
+// --- GÉNEROS ---
+function renderGeneros() {
+    const container = document.getElementById('genre-list');
+    if(!container) return;
+    container.innerHTML = '';
+    
+    GENEROS.forEach(gen => {
+        const btn = document.createElement('button');
+        btn.className = 'genre-chip focusable';
+        btn.innerText = gen;
+        btn.setAttribute('tabindex', '0');
+        btn.onclick = () => buscar(gen); // Al hacer clic busca ese género
+        container.appendChild(btn);
+    });
+}
 
 // --- HOME ---
 async function cargarEstrenos() {
@@ -83,13 +80,18 @@ async function cargarEstrenos() {
 }
 
 // --- SEARCH ---
-async function buscar() {
-    const q = document.getElementById('inp').value;
+async function buscar(termino = null) {
+    // Si viene un término (click en botón género), lo usamos. Si no, leemos el input.
+    const q = termino || document.getElementById('inp').value;
     if (!q) return;
     
+    // Si fue por botón, ponemos el texto en el input para que se vea
+    if(termino) document.getElementById('inp').value = termino;
+
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader">Buscando...</div>';
     
+    // NOTA: Usamos el buscador general porque es más flexible para encontrar "Gore" o "Isekai"
     const data = await fetchData(`/search?query=${encodeURIComponent(q)}`);
     grid.innerHTML = '';
     
@@ -107,26 +109,16 @@ function crearTarjeta(item, container, context) {
     card.setAttribute('tabindex', '0');
     
     const img = item.cover || 'https://via.placeholder.com/150';
-    let meta = '';
-    
-    if (context === 'latest') meta = `Ep ${item.number}`;
-    else if (context === 'search') meta = item.type || 'Anime';
-    else meta = `Visto: Ep ${item.lastEp}`;
+    let meta = context === 'latest' ? `Ep ${item.number}` : (context === 'search' ? (item.type || 'Anime') : `Ep ${item.lastEp}`);
     
     card.innerHTML = `
         <img src="${img}" loading="lazy">
         ${context === 'latest' ? '<div class="badge-new">NUEVO</div>' : ''}
-        <div class="info">
-            <span class="title">${item.title}</span>
-            <div class="meta">${meta}</div>
-        </div>
+        <div class="info"><span class="title">${item.title}</span><div class="meta">${meta}</div></div>
     `;
-    
     card.onclick = () => {
-        if (context === 'search') {
-            cargarDetallesAnime(item.slug);
-        } else if (context === 'latest') {
-            // Limpiar slug de episodio para obtener anime
+        if (context === 'search') cargarDetallesAnime(item.slug);
+        else if (context === 'latest') {
             const slugAnime = item.slug.split('-').slice(0, -1).join('-');
             currentAnimeSlug = slugAnime;
             prepararReproductor(item.slug, item.title, item.number, img);
@@ -135,8 +127,6 @@ function crearTarjeta(item, container, context) {
             currentAnimeSlug = item.animeSlug;
         }
     };
-    
-    card.onkeydown = (e) => { if(e.key === 'Enter') card.click(); };
     container.appendChild(card);
 }
 
@@ -144,7 +134,6 @@ function crearTarjeta(item, container, context) {
 async function cargarDetallesAnime(slug) {
     currentAnimeSlug = slug;
     agregarHistorial('details');
-    
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
     modal.scrollTop = 0;
@@ -153,7 +142,6 @@ async function cargarDetallesAnime(slug) {
     document.getElementById('det-episodes').innerHTML = '<div class="loader">...</div>';
     
     const info = await fetchData(`/anime/${slug}`);
-    
     if(info) {
         document.getElementById('det-title').innerText = info.title;
         document.getElementById('det-synopsis').innerText = (info.synopsis || "Sin sinopsis.").substring(0, 200) + "...";
@@ -162,29 +150,19 @@ async function cargarDetallesAnime(slug) {
         
         const grid = document.getElementById('det-episodes');
         grid.innerHTML = '';
-        
         if(info.episodes.length > 0) {
-            // Configurar botón "Ver último"
-            document.getElementById('btn-play-latest').onclick = () => 
-                prepararReproductor(info.episodes[0].slug, info.title, info.episodes[0].number, info.cover);
-            
-            // Lista completa
+            document.getElementById('btn-play-latest').onclick = () => prepararReproductor(info.episodes[0].slug, info.title, info.episodes[0].number, info.cover);
             info.episodes.forEach(ep => {
                 const b = document.createElement('div');
                 b.className = 'ep-card focusable';
-                b.setAttribute('tabindex', '0');
                 b.innerText = `Ep ${ep.number}`;
                 b.onclick = () => prepararReproductor(ep.slug, info.title, ep.number, info.cover);
-                b.onkeydown = (e) => { if(e.key === 'Enter') b.click(); };
                 grid.appendChild(b);
             });
         }
     }
 }
-function cerrarDetalles() { 
-    document.getElementById('details-modal').style.display = 'none'; 
-    history.back(); 
-}
+function cerrarDetalles() { document.getElementById('details-modal').style.display = 'none'; history.back(); }
 
 // --- REPRODUCTOR ---
 async function prepararReproductor(slug, title, number, cover) {
@@ -203,7 +181,6 @@ async function prepararReproductor(slug, title, number, cover) {
     list.innerHTML = '';
     
     if(data && data.servers) {
-        // Orden inteligente
         const prio = ["Okru", "YourUpload", "Maru", "Netu", "Streamwish", "Mega"];
         data.servers.sort((a,b) => {
             const pa = prio.indexOf(a.name); const pb = prio.indexOf(b.name);
@@ -227,18 +204,8 @@ async function prepararReproductor(slug, title, number, cover) {
         list.innerHTML = 'Error: No servers';
     }
 }
-function cerrarReproductor() { 
-    document.getElementById('player-modal').style.display = 'none'; 
-    document.getElementById('video-wrapper').innerHTML=''; 
-    history.back(); 
-}
-function abrirDetallesDesdePlayer() { 
-    // Truco: cerramos player (lo cual hace history back) y abrimos detalles
-    document.getElementById('player-modal').style.display = 'none';
-    document.getElementById('video-wrapper').innerHTML='';
-    history.back(); 
-    setTimeout(()=>cargarDetallesAnime(currentAnimeSlug), 300); 
-}
+function cerrarReproductor() { document.getElementById('player-modal').style.display = 'none'; document.getElementById('video-wrapper').innerHTML=''; history.back(); }
+function abrirDetallesDesdePlayer() { cerrarReproductor(); setTimeout(()=>cargarDetallesAnime(currentAnimeSlug), 300); }
 
 // --- UTILS ---
 function renderHistorial() {
@@ -252,9 +219,6 @@ function guardarHistorial(i) {
     let h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     h = h.filter(x => x.animeSlug !== i.animeSlug);
     h.push(i);
-    if(h.length>50) h.shift();
     localStorage.setItem('animeHistory', JSON.stringify(h));
 }
-function borrarHistorial() { 
-    if(confirm("¿Borrar?")) { localStorage.removeItem('animeHistory'); renderHistorial(); } 
-}
+function borrarHistorial() { if(confirm("¿Borrar?")) { localStorage.removeItem('animeHistory'); renderHistorial(); } }
