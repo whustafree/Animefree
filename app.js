@@ -159,11 +159,10 @@ async function cargarDetallesAnime(slug) {
     const info = await fetchData(`/anime/${slug}`);
     
     if(info) {
-        // --- FIX CRÍTICO: ORDENAMIENTO FORZADO ---
-        // Esto asegura que el Ep 12 esté primero y el Ep 1 al final.
-        // Así la lógica de "Siguiente" funcionará siempre.
+        // --- FIX ORDEN: ASCENDENTE (1, 2, 3...) ---
+        // 'a - b' ordena de menor a mayor
         if (info.episodes) {
-            info.episodes.sort((a,b) => parseFloat(b.number) - parseFloat(a.number));
+            info.episodes.sort((a,b) => parseFloat(a.number) - parseFloat(b.number));
         }
 
         currentAnimeData = info; 
@@ -181,9 +180,11 @@ async function cargarDetallesAnime(slug) {
 
         if(info.episodes.length > 0) {
             document.getElementById('btn-play-latest').onclick = () => {
-                // Al estar ordenado DESC, el 0 es el último capítulo (el más nuevo)
-                currentEpisodeIndex = 0; 
-                prepararReproductor(info.episodes[0].slug, info.title, info.episodes[0].number, info.cover);
+                // COMO ESTÁ ORDENADO ASCENDENTE, EL ÚLTIMO ES EL FINAL DEL ARRAY
+                const lastIndex = info.episodes.length - 1;
+                currentEpisodeIndex = lastIndex; 
+                const lastEp = info.episodes[lastIndex];
+                prepararReproductor(lastEp.slug, info.title, lastEp.number, info.cover);
             };
             
             info.episodes.forEach((ep, index) => {
@@ -214,19 +215,16 @@ async function prepararReproductor(slug, title, number, cover) {
     if(currentAnimeData) guardarHistorial({animeSlug: currentAnimeData.slug, slug:slug, title:title, lastEp:number, cover:cover});
     marcarComoVisto(slug);
 
-    // LOGICA SIGUIENTE (Ahora funciona porque el orden está garantizado)
+    // LOGICA SIGUIENTE ADAPTADA AL ORDEN ASCENDENTE (1->2->3)
     const btnNext = document.getElementById('btn-next-ep');
     
-    // Si currentEpisodeIndex > 0, significa que NO estamos en el índice 0 (el capítulo más nuevo).
-    // Por tanto, existe un índice menor (más hacia el futuro).
-    // Ej: Array [Ep12, Ep11... Ep1]. Estoy en Ep1 (Index 11).
-    // 11 > 0 ? Sí.
-    // nextEp = Array[10] -> Ep2. Correcto.
-    if (currentAnimeData && currentEpisodeIndex > 0) {
+    // Si NO estamos en el último índice, hay uno siguiente (mayor índice)
+    // Ej: Array[0]=Ep1, Array[1]=Ep2. Estoy en 0. Next es 1.
+    if (currentAnimeData && currentEpisodeIndex < currentAnimeData.episodes.length - 1) {
         btnNext.style.display = 'block';
         btnNext.onclick = () => {
-            const nextEp = currentAnimeData.episodes[currentEpisodeIndex - 1]; 
-            currentEpisodeIndex--; 
+            const nextEp = currentAnimeData.episodes[currentEpisodeIndex + 1]; // SUMAMOS para ir al siguiente
+            currentEpisodeIndex++; 
             history.replaceState({ page: 'player' }, "", `#player`); 
             prepararReproductor(nextEp.slug, currentAnimeData.title, nextEp.number, currentAnimeData.cover);
         };
@@ -301,7 +299,7 @@ function renderHistorial() {
     const h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     grid.innerHTML = '';
     if(h.length===0) grid.innerHTML = '<div class="placeholder-msg"><p>Sin historial</p></div>';
-    h.reverse().forEach(i => crearTarjeta(i, grid, 'history'));
+    h.reverse().forEach(i => crearTarjeta(i, g, 'history'));
 }
 function guardarHistorial(i) {
     let h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
