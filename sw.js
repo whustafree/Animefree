@@ -1,4 +1,5 @@
-const CACHE_NAME = 'animofree-v19-pro'; // <--- V13
+const CACHE_NAME = 'animofree-v19-shield'; // <--- NUEVA VERSION
+// ... todo lo demás igual ...
 // ... el resto igual que siempre ...
 const ASSETS = [
   './',
