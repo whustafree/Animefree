@@ -1,46 +1,46 @@
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
-const PROXIES = [ (u)=>u, (u)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, (u)=>`https://corsproxy.io/?${encodeURIComponent(u)}` ];
+// Proxies rotativos para saltar bloqueos
+const PROXIES = [ 
+    (u) => u, 
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, 
+    (u) => `https://corsproxy.io/?${encodeURIComponent(u)}` 
+];
 
 let currentAnimeSlug = null;
 
-// --- SISTEMA DE NAVEGACIÓN (HISTORIAL) ---
+// --- SISTEMA DE NAVEGACIÓN POR GESTOS (HISTORIAL) ---
 window.addEventListener('popstate', (event) => {
-    // Cuando el usuario hace el gesto "Atrás", el navegador dispara este evento.
-    // Verificamos qué tenemos abierto para cerrarlo visualmente.
-    
+    // Si hay un modal abierto, lo cerramos en lugar de salir de la app
     const player = document.getElementById('player-modal');
     const details = document.getElementById('details-modal');
     const search = document.getElementById('searchContainer');
 
-    // Prioridad 1: Si el reproductor está abierto, lo cerramos
-    if (player.style.display === 'flex') {
+    if (player && player.style.display === 'flex') {
         player.style.display = 'none';
-        document.getElementById('video-wrapper').innerHTML = ''; // Parar video
+        document.getElementById('video-wrapper').innerHTML = ''; 
         return;
     }
-
-    // Prioridad 2: Si los detalles están abiertos, los cerramos
-    if (details.style.display === 'block') {
+    if (details && details.style.display === 'block') {
         details.style.display = 'none';
         return;
     }
-    
-    // Prioridad 3: Si el buscador está abierto, lo cerramos
-    if (search.style.display === 'flex') {
+    if (search && search.style.display === 'flex') {
         search.style.display = 'none';
         return;
     }
-
-    // Si no hay nada abierto, el navegador seguirá su curso normal (salir o volver al inicio)
+    // Si estamos en la vista de búsqueda, volvemos al inicio
+    const searchView = document.getElementById('view-search');
+    if (searchView && searchView.classList.contains('active')) {
+        cambiarVista('home');
+        return;
+    }
 });
 
-// Función para "crear" una página nueva en el historial
-function agregarHistorial(id) {
-    history.pushState({ page: id }, "", `#${id}`);
+function agregarHistorial(stateId) {
+    history.pushState({ page: stateId }, "", `#${stateId}`);
 }
 
-
-// --- CORE FUNCTIONS ---
+// --- CORE FETCH ---
 async function fetchData(endpoint) {
     for (const wrap of PROXIES) {
         try {
@@ -58,17 +58,24 @@ async function fetchData(endpoint) {
 window.onload = () => { 
     cargarEstrenos(); 
     renderHistorial(); 
-    
-    // Reemplazamos el estado inicial para evitar bugs
+    // Estado base para que el botón atrás no saque de la app inmediatamente
     history.replaceState({ page: 'home' }, "", "");
 };
 
 // --- NAVEGACIÓN VISTAS ---
 function cambiarVista(id) {
+    // 1. Ocultar todas las vistas
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(`view-${id}`).classList.add('active');
-    document.getElementById(`btn-${id}`).classList.add('active');
+    
+    // 2. Mostrar la vista deseada
+    const view = document.getElementById(`view-${id}`);
+    if (view) view.classList.add('active');
+
+    // 3. Iluminar botón (SOLO SI EXISTE - AQUÍ ESTABA EL ERROR)
+    const btn = document.getElementById(`btn-${id}`);
+    if (btn) btn.classList.add('active');
+    
     if(id === 'history') renderHistorial();
 }
 
@@ -76,11 +83,11 @@ function toggleSearch() {
     const el = document.getElementById('searchContainer');
     if (el.style.display === 'flex') {
         el.style.display = 'none';
-        // Si cerramos manual, retrocedemos historial si corresponde (opcional)
+        if (document.getElementById('inp').value === '') history.back(); 
     } else {
         el.style.display = 'flex';
         document.getElementById('inp').focus();
-        agregarHistorial('search_overlay'); // Agregamos estado para poder volver
+        agregarHistorial('search_overlay');
     }
 }
 
@@ -90,15 +97,18 @@ async function cargarEstrenos() {
     const data = await fetchData('/list/latest-episodes');
     grid.innerHTML = '';
     if (data) data.forEach(item => crearTarjeta(item, grid, 'latest'));
-    else grid.innerHTML = '<div style="padding:20px">Error de conexión</div>';
+    else grid.innerHTML = '<div style="padding:20px; text-align:center;">Error de conexión</div>';
 }
 
 async function buscar() {
     const q = document.getElementById('inp').value;
     if (!q) return;
-    cambiarVista('search');
-    // Cerrar el overlay de búsqueda
+
+    // Ocultar barra de búsqueda y teclado
     document.getElementById('searchContainer').style.display = 'none';
+    document.getElementById('inp').blur();
+
+    cambiarVista('search'); // Cambiamos a la vista de resultados
     
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader">Buscando...</div>';
@@ -109,11 +119,11 @@ async function buscar() {
     if (data && data.media) {
         data.media.forEach(anime => crearTarjeta(anime, grid, 'search'));
     } else {
-        grid.innerHTML = '<div style="padding:20px">No encontrado</div>';
+        grid.innerHTML = '<div style="padding:20px; text-align:center;">No se encontraron resultados.</div>';
     }
 }
 
-// --- TARJETAS ---
+// --- UI COMPONENTS ---
 function crearTarjeta(item, container, context) {
     const card = document.createElement('div');
     card.className = 'anime-card focusable';
@@ -140,6 +150,7 @@ function crearTarjeta(item, container, context) {
         if (context === 'search') {
             cargarDetallesAnime(item.slug);
         } else if (context === 'latest') {
+            // Truco para obtener slug de anime desde slug de episodio
             const partes = item.slug.split('-');
             partes.pop(); 
             currentAnimeSlug = partes.join('-'); 
@@ -150,22 +161,20 @@ function crearTarjeta(item, container, context) {
         }
     };
     
+    // Soporte para TV (Enter)
     card.onkeydown = (e) => { if(e.key === 'Enter') card.click(); };
+    
     container.appendChild(card);
 }
 
 // --- DETALLES ---
 async function cargarDetallesAnime(slug) {
     currentAnimeSlug = slug;
-    
-    // 1. ABRIR MODAL
+    agregarHistorial('details'); // Agregamos estado para poder volver con gesto
+
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
     
-    // 2. AGREGAR AL HISTORIAL (El truco mágico)
-    agregarHistorial('details'); 
-
-    // Limpiar UI
     document.getElementById('det-title').innerText = 'Cargando...';
     document.getElementById('det-episodes').innerHTML = '<div class="loader">...</div>';
     
@@ -183,15 +192,16 @@ async function cargarDetallesAnime(slug) {
         epList.innerHTML = '';
         
         if (info.episodes && info.episodes.length > 0) {
+            // Botón reproducir el más reciente
             const lastEp = info.episodes[0];
             const btnPlay = document.getElementById('btn-play-latest');
-            btnPlay.onclick = () => prepararReproductor(lastEp.slug, info.title, lastEp.number, info.cover);
+            if(btnPlay) btnPlay.onclick = () => prepararReproductor(lastEp.slug, info.title, lastEp.number, info.cover);
             
             info.episodes.forEach(ep => {
                 const btn = document.createElement('div');
                 btn.className = 'ep-card focusable';
                 btn.setAttribute('tabindex', '0');
-                btn.innerText = `Episodio ${ep.number}`;
+                btn.innerText = `Ep ${ep.number}`;
                 btn.onclick = () => prepararReproductor(ep.slug, info.title, ep.number, info.cover);
                 btn.onkeydown = (e) => { if(e.key === 'Enter') btn.click(); };
                 epList.appendChild(btn);
@@ -200,23 +210,20 @@ async function cargarDetallesAnime(slug) {
     }
 }
 
-// Función modificada para cerrar usando el historial
 function cerrarDetalles() {
-    // Simulamos pulsar "Atrás" para ser consistentes
-    history.back();
+    history.back(); // Usamos el historial para cerrar
 }
 
 // --- REPRODUCTOR ---
 async function prepararReproductor(slug, title, number, cover) {
+    agregarHistorial('player'); // Agregamos estado
+
     const modal = document.getElementById('player-modal');
     modal.style.display = 'flex';
-    
-    // AGREGAR AL HISTORIAL
-    agregarHistorial('player');
-
     document.getElementById('player-title').innerText = `${title} - Ep ${number}`;
     document.getElementById('video-wrapper').innerHTML = '';
     
+    // Guardar Historial de visualización
     if (currentAnimeSlug) {
         guardarHistorial({ 
             animeSlug: currentAnimeSlug,
@@ -255,25 +262,14 @@ async function prepararReproductor(slug, title, number, cover) {
 }
 
 function abrirDetallesDesdePlayer() {
-    // Al salir del player, queremos ir a detalles.
-    // Como player agregó historia, hacemos back para cerrarlo
-    // PERO si venimos directo de Home, details no está en historial.
-    
-    // Estrategia simple: Cerramos player y abrimos details
-    document.getElementById('player-modal').style.display = 'none';
-    document.getElementById('video-wrapper').innerHTML = '';
-    
-    // Forzamos un history back manual para sacar el estado 'player'
+    // Cerramos player (history back) y luego abrimos detalles
     history.back();
-
-    // Pequeño delay y abrimos detalles
     setTimeout(() => {
         if (currentAnimeSlug) cargarDetallesAnime(currentAnimeSlug);
-    }, 100);
+    }, 200);
 }
 
 function cerrarReproductor() {
-    // Simular Atrás
     history.back();
 }
 
@@ -283,17 +279,20 @@ function renderHistorial() {
     if(!grid) return;
     const h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     grid.innerHTML = '';
-    if(h.length === 0) grid.innerHTML = '<div style="padding:20px; color:#555">Historial vacío</div>';
+    if(h.length === 0) grid.innerHTML = '<div style="padding:20px; color:#555; grid-column:1/-1; text-align:center;">Historial vacío</div>';
     h.reverse().forEach(item => crearTarjeta(item, grid, 'history'));
 }
+
 function guardarHistorial(item) {
     let h = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     h = h.filter(x => x.animeSlug !== item.animeSlug);
     h.push(item);
-    if(h.length > 20) h.shift();
+    if(h.length > 50) h.shift();
     localStorage.setItem('animeHistory', JSON.stringify(h));
 }
+
 function borrarHistorial() { 
     if(confirm("¿Borrar historial?")) { localStorage.removeItem('animeHistory'); renderHistorial(); } 
 }
+
 function recargar() { location.reload(); }
