@@ -1,20 +1,72 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Whustaf TV</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .tv-body { background: #111; color: white; overflow: hidden; font-family: sans-serif; }
+        .tv-navbar { position: fixed; left: 0; top: 0; width: 250px; height: 100%; background: #000; display: flex; flex-direction: column; padding: 20px; z-index: 100; border-right: 1px solid #333; }
+        .tv-logo { font-size: 24px; font-weight: bold; color: var(--primary); margin-bottom: 40px; }
+        .tv-logo span { color: white; }
+        .tv-link { background: transparent; border: none; color: #aaa; text-align: left; padding: 15px; font-size: 18px; margin-bottom: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; width: 100%; }
+        .tv-link:focus, .tv-link.active { background: var(--primary); color: white; outline: none; transform: scale(1.05); }
+        
+        /* Áreas de vista */
+        .tv-view { position: fixed; left: 250px; top: 0; width: calc(100% - 250px); height: 100%; display: none; padding: 30px; overflow-y: auto; scroll-behavior: smooth; }
+        .tv-view.active { display: block; }
+        
+        /* Hero */
+        .hero-section { position: relative; height: 400px; border-radius: 15px; overflow: hidden; margin-bottom: 30px; }
+        .hero-bg { position: absolute; width: 100%; height: 100%; background-size: cover; background-position: center; opacity: 0.6; }
+        .hero-content { position: relative; z-index: 2; padding: 40px; background: linear-gradient(to right, #000 0%, transparent 100%); height: 100%; display: flex; flex-direction: column; justify-content: center; }
+        .hero-btn { padding: 10px 25px; border: none; border-radius: 5px; font-size: 16px; margin-right: 10px; cursor: pointer; }
+        .hero-btn.primary { background: var(--primary); color: white; }
+        .hero-btn:focus { transform: scale(1.1); outline: 3px solid white; }
+
+        /* Grids y Filas */
+        .tv-row-title { font-size: 22px; margin-bottom: 15px; margin-top: 30px; color: #eee; }
+        .tv-row-container { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; }
+        .tv-grid-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        
+        /* Tarjetas */
+        .anime-card { min-width: 160px; width: 160px; background: #222; border-radius: 8px; overflow: hidden; transition: 0.2s; }
+        .anime-card img { width: 100%; height: 240px; object-fit: cover; }
+        .anime-card:focus { transform: scale(1.1); outline: 4px solid var(--primary); z-index: 10; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+
+        /* Buscador TV */
+        .tv-search-header { display: flex; gap: 10px; margin-bottom: 30px; }
+        .tv-input { flex: 1; padding: 15px; border-radius: 5px; border: none; background: #333; color: white; font-size: 18px; }
+        .tv-input:focus { background: #444; outline: 3px solid var(--primary); }
+
+        /* Modales */
+        .tv-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; }
+        .tv-modal-content { width: 90%; height: 90%; background: #1a1a1a; display: flex; border-radius: 10px; overflow: hidden; }
+        .tv-modal-left { width: 30%; height: 100%; }
+        .tv-modal-left img { width: 100%; height: 100%; object-fit: cover; }
+        .tv-modal-right { width: 70%; padding: 40px; overflow-y: auto; }
+        
+        /* Episodios lista */
+        .tv-episodes-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 20px; }
+        .tv-ep-btn { background: #333; color: white; border: none; padding: 15px; border-radius: 5px; cursor: pointer; text-align: center; }
+        .tv-ep-btn:focus { background: var(--primary); outline: 2px solid white; transform: scale(1.1); }
+        
+        /* Player */
+        .tv-player-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 300; display: none; }
+        .tv-close-player { position: absolute; top: 20px; right: 20px; background: rgba(255,0,0,0.5); color: white; border: none; padding: 10px 20px; font-size: 20px; border-radius: 5px; }
+        .tv-close-player:focus { background: red; transform: scale(1.2); }
+    </style>
 </head>
 <body class="tv-body">
 
     <nav class="tv-navbar">
         <div class="tv-logo">WHUSTAF<span>TV</span></div>
         <div class="tv-menu-items">
-            <button onclick="tvTab('home')" class="tv-link focusable active" id="tv-home">Inicio</button>
-            <button onclick="tvTab('search')" class="tv-link focusable">Buscar</button>
-            <button onclick="tvTab('favorites')" class="tv-link focusable">Mi Lista</button>
-            <button onclick="tvTab('history')" class="tv-link focusable">Historial</button>
+            <button onclick="tvTab('home')" class="tv-link focusable active" id="tv-home">🏠 Inicio</button>
+            <button onclick="tvTab('search')" class="tv-link focusable" id="tv-search">🔍 Buscar</button>
+            <button onclick="tvTab('favorites')" class="tv-link focusable">❤️ Mi Lista</button>
+            <button onclick="tvTab('history')" class="tv-link focusable">🕒 Historial</button>
+            <button onclick="borrarCaches()" class="tv-link focusable" style="margin-top: 50px; color: #ff5555;">🧹 Limpiar</button>
         </div>
     </nav>
 
@@ -23,12 +75,11 @@
             <div id="hero-bg" class="hero-bg"></div>
             <div class="hero-overlay"></div>
             <div class="hero-content">
-                <span class="hero-badge">ESTRENO</span>
-                <h1 id="hero-title">Cargando...</h1>
-                <p id="hero-desc">...</p>
-                <div class="hero-actions">
+                <span class="hero-badge" style="background:var(--primary); padding:5px 10px; border-radius:4px; font-weight:bold;">ESTRENO</span>
+                <h1 id="hero-title" style="font-size: 40px; margin: 10px 0;">Cargando...</h1>
+                <p id="hero-desc" style="font-size: 18px; color: #ccc;">...</p>
+                <div class="hero-actions" style="margin-top: 20px;">
                     <button id="hero-play" class="hero-btn primary focusable">▶ Reproducir</button>
-                    <button id="hero-info" class="hero-btn secondary focusable">Más Info</button>
                 </div>
             </div>
         </div>
@@ -44,7 +95,7 @@
 
     <div id="view-search" class="tv-view">
         <div class="tv-search-header">
-            <input type="text" id="tv-search-input" class="tv-input focusable" placeholder="Escribe para buscar...">
+            <input type="text" id="tv-search-input" class="tv-input focusable" placeholder="Escribe el nombre del anime...">
             <button onclick="tvBuscar()" class="hero-btn secondary focusable">Buscar</button>
         </div>
         <div id="tv-search-results" class="tv-grid-results"></div>
@@ -66,14 +117,14 @@
                 <img id="tv-det-img" src="">
             </div>
             <div class="tv-modal-right">
-                <h1 id="tv-det-title">...</h1>
-                <p id="tv-det-desc">...</p>
-                <div class="hero-actions">
+                <h1 id="tv-det-title" style="font-size: 36px; margin-bottom: 20px;">...</h1>
+                <p id="tv-det-desc" style="font-size: 16px; color: #ccc; line-height: 1.5;">...</p>
+                <div class="hero-actions" style="margin-top: 30px;">
                     <button id="tv-btn-play" class="hero-btn primary focusable">▶ Ver</button>
                     <button id="tv-btn-fav" class="hero-btn secondary focusable">Fav</button>
                     <button onclick="closeTvDetails()" class="hero-btn secondary focusable">Cerrar</button>
                 </div>
-                <h3>Episodios</h3>
+                <h3 style="margin-top: 30px;">Episodios</h3>
                 <div id="tv-episodes-list" class="tv-episodes-list"></div>
             </div>
         </div>
@@ -84,6 +135,6 @@
         <button onclick="closeTvPlayer()" class="tv-close-player focusable">✕</button>
     </div>
 
-    <script src="app_tv.js"></script>
+    <script src="app_tv.js?v=tv_fix_final"></script>
 </body>
 </html>
