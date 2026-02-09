@@ -1,4 +1,5 @@
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
+// Rotación mejorada para evitar bloqueos 403
 const PROXIES = [ 
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
     (u) => `https://thingproxy.freeboard.io/fetch/${u}`,
@@ -13,7 +14,6 @@ let currentGenre = "";
 let hasMoreResults = true; 
 let isLoadingMore = false;
 
-// Mapeo de géneros técnicos para la API
 const GENRE_MAP = {
     "Acción": "accion", "Aventuras": "aventuras", "Comedia": "comedia", "Drama": "drama", 
     "Ecchi": "ecchi", "Fantasía": "fantasia", "Romance": "romance", "Shounen": "shounen", 
@@ -26,14 +26,10 @@ window.onload = () => {
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
     }
     history.replaceState({ page: 'home' }, ""); 
-    
-    // Inicialización de funciones principales
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
     renderGeneros();
-    
-    // Carga automática del directorio gigante en la pestaña de búsqueda
     cargarMasResultados(true); 
 };
 
@@ -49,7 +45,7 @@ window.onpopstate = (event) => {
 };
 
 async function fetchData(endpoint) {
-    // Normalización de texto para evitar errores con tildes
+    // Normalización para evitar errores de red con caracteres especiales
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
     for (const wrap of PROXIES) {
@@ -67,7 +63,6 @@ async function fetchData(endpoint) {
     return null;
 }
 
-// REPARACIÓN: Función declarada correctamente para evitar ReferenceError
 async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
     if (!grid) return;
@@ -103,7 +98,6 @@ async function buscar() {
     cargarMasResultados(true);
 }
 
-// BÚSQUEDA MEJORADA: Usa el directorio de la API para cargar miles de opciones
 async function cargarMasResultados(limpiar) {
     if (isLoadingMore || !hasMoreResults) return; 
     isLoadingMore = true;
@@ -209,6 +203,7 @@ window.setSource = (url) => {
     document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
 };
 
+// CORRECCIÓN: Ahora vuelve a los capítulos sin recargar la página
 window.volverALista = () => {
     document.getElementById('player-modal').style.display = 'none';
     document.getElementById('video-wrapper').innerHTML = '';
@@ -270,7 +265,6 @@ function renderHistorial() {
     hist.forEach(h => crearTarjeta(h, grid, 'hist'));
 }
 
-// SCROLL INFINITO PARA EL DIRECTORIO
 window.onscroll = () => {
     if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
         if(document.getElementById('tab-search').classList.contains('active')) {
@@ -280,4 +274,4 @@ window.onscroll = () => {
 };
 
 window.borrarHistorial = () => { localStorage.removeItem('animeHistory'); renderHistorial(); };
-window.toggleSettings = () => alert("Whustaf Web v1.6\nBúsqueda Pro y Directorio activado.");
+window.toggleSettings = () => alert("Whustaf Web v1.6\nLimpieza de Slugs y Proxies activa.");
