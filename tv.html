@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Whustaf TV</title>
+    <link rel="stylesheet" href="style.css">
     <style>
         /* --- ESTILOS BASE TV --- */
         :root { --primary: #ff4757; --bg: #0f0f0f; --focus: white; }
@@ -19,7 +20,7 @@
         #app-background {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-size: cover; background-position: center top;
-            opacity: 0.35; z-index: -1; transition: opacity 0.5s ease; /* Transición suave para ocultarlo */
+            opacity: 0.35; z-index: -1; transition: opacity 0.5s ease;
         }
         .vignette {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -30,23 +31,23 @@
         /* --- LAYOUT PRINCIPAL --- */
         .tv-container { display: flex; height: 100%; width: 100%; }
 
-        /* --- MENÚ LATERAL (REPARADO) --- */
+        /* --- MENÚ LATERAL --- */
         .sidebar {
-            width: 80px; /* Ancho fijo inicial seguro */
+            width: 80px;
             background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
             align-items: center; padding-top: 30px; z-index: 100; 
             transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
             border-right: 1px solid #333;
         }
-        /* Al enfocar, crece */
-        .sidebar:has(:focus-within) { width: 240px; align-items: flex-start; padding-left: 20px; }
+        
+        /* Expansión del menú al tener el foco dentro */
+        .sidebar:focus-within { width: 240px; align-items: flex-start; padding-left: 20px; }
         
         .logo { font-weight:bold; color:var(--primary); font-size: 24px; margin-bottom: 40px; align-self: center; }
         
         .nav-btn {
             background: transparent; border: none; color: #aaa; 
-            height: 60px; /* Altura fija para que no se monten */
-            width: 100%;
+            height: 60px; width: 100%;
             display: flex; align-items: center; gap: 20px;
             padding: 0 20px; margin-bottom: 10px;
             border-radius: 10px; font-size: 24px; cursor: pointer; 
@@ -55,7 +56,8 @@
         }
         
         .nav-btn span { font-size: 18px; opacity: 0; transition: 0.2s; font-weight: 600; }
-        .sidebar:has(:focus-within) .nav-btn span { opacity: 1; }
+        /* Mostrar texto al expandir */
+        .sidebar:focus-within .nav-btn span { opacity: 1; }
         
         .nav-btn.active { color: var(--primary); background: rgba(255,71,87,0.1); }
         .nav-btn:focus { background: var(--focus); color: black; transform: scale(1.05); box-shadow: 0 0 20px rgba(255,255,255,0.3); }
@@ -93,7 +95,7 @@
         .search-input:focus { background: rgba(255,255,255,0.2); border-color: var(--primary); }
 
         /* --- MODAL DETALLES --- */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 200; align-items: center; justify-content: center; }
         .modal-content { display: flex; width: 90%; height: 85%; gap: 40px; }
         .modal-img { width: 350px; height: 500px; object-fit: cover; border-radius: 12px; }
         .modal-info { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -115,10 +117,10 @@
         .ep-btn:focus { background: var(--primary); border-color: var(--primary); transform: scale(1.1); }
 
         /* --- PLAYER & SERVER SELECTOR --- */
-        .player-overlay { display: none; position: fixed; inset: 0; background: black; z-index: 300; flex-direction: column; justify-content: center; align-items: center; }
+        .player-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 300; flex-direction: column; justify-content: center; align-items: center; }
         
         .server-selector {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 301;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 301;
             display: none; flex-direction: column; align-items: center; justify-content: center;
         }
         .server-title { font-size: 32px; margin-bottom: 30px; }
@@ -177,7 +179,7 @@
 
             <div id="view-search" class="search-container">
                 <h1 style="margin-bottom: 20px;">Buscador</h1>
-                <input type="text" id="search-input" class="search-input" placeholder="Escribe el nombre...">
+                <input type="text" id="search-input" class="search-input" placeholder="Escribe el nombre del anime...">
                 <div class="rows-container">
                     <div class="row-scroller" id="search-results" style="flex-wrap: wrap; overflow-y: auto;"></div>
                 </div>
@@ -221,6 +223,6 @@
         <button class="close-player" onclick="closePlayer()">✕ Salir</button>
     </div>
 
-    <script src="app_tv.js?v=tv_reparado"></script>
+    <script src="app_tv.js?v=final_validated"></script>
 </body>
 </html>
