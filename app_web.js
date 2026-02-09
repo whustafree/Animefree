@@ -1,47 +1,5 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN TEMPORADA (APP_WEB.JS)
-// ==========================================
-
-// --- DEPURACIÓN ---
-let isDebugActive = false;
-let logBuffer = [];
-const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
-function logToVisualConsole(msg, type) {
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = `[${timestamp}] [${type}] ${msg}`;
-    logBuffer.push(logEntry);
-    if(logBuffer.length > 200) logBuffer.shift();
-    if (!isDebugActive) return;
-    const consoleDiv = document.getElementById('console-logs');
-    if (consoleDiv) {
-        const line = document.createElement('div');
-        line.className = `log-line log-${type.toLowerCase()}`;
-        line.textContent = logEntry;
-        consoleDiv.appendChild(line);
-        consoleDiv.scrollTop = consoleDiv.scrollHeight;
-    }
-}
-console.log = (...args) => { originalLog(...args); logToVisualConsole(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '), 'INFO'); };
-console.error = (...args) => { originalError(...args); logToVisualConsole(args.join(' '), 'ERROR'); };
-window.onerror = (msg, url, line) => { console.error(`CRASH: ${msg} (${line})`); return false; };
-
-// --- UI HELPERS ---
-window.toggleSettings = () => document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block' ? 'none' : 'block');
-window.toggleDebugMode = () => {
-    isDebugActive = !isDebugActive;
-    const div = document.getElementById('debug-console');
-    const chk = document.getElementById('chk-debug');
-    div.style.display = isDebugActive ? 'flex' : 'none';
-    if(chk) chk.checked = isDebugActive;
-    if(isDebugActive) console.log("--- MODO DEBUG ACTIVADO ---");
-};
-window.copiarLogs = () => navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("Copiado"));
-window.limpiarLogs = () => { logBuffer = []; document.getElementById('console-logs').innerHTML = ''; };
-window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
-
-
-// ==========================================
-// --- LÓGICA PRINCIPAL ---
+// WHUSTAF WEB - VERSIÓN TEMPORADA (BOTÓN LOAD MORE)
 // ==========================================
 
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
@@ -52,21 +10,22 @@ const PROXIES = [
     (u) => `https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
+// VARIABLES
 let currentAnimeData = null;
 let currentEpisodeIndex = -1;
 let searchPage = 1; 
 let currentQuery = ""; 
-let currentStatus = ""; // NUEVO: Variable para el estado (1 = En emisión)
+let currentStatus = ""; 
 let hasMoreResults = true; 
 let isLoadingMore = false;
 
+// INICIO
 window.onload = () => {
     if (window.location.protocol !== 'file:' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
     history.replaceState({ page: 'home' }, "", ""); 
     
-    console.log("Iniciando App con Filtro de Temporada...");
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
@@ -86,10 +45,10 @@ window.onpopstate = () => {
     }
 };
 
+// FETCH CON PROXIES
 async function fetchData(endpoint) {
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    console.log(`[NET] Fetch: ${cleanEndpoint}`);
-
+    
     for (const wrap of PROXIES) {
         try {
             const resp = await fetch(wrap(API_BASE + cleanEndpoint));
@@ -103,11 +62,10 @@ async function fetchData(endpoint) {
             } catch (e) { continue; }
         } catch (e) { console.warn("Proxy fail"); }
     }
-    console.error("Todos los proxies fallaron");
     return null;
 }
 
-// --- ESTRENOS (HOME) ---
+// ESTRENOS
 async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
     if (!grid) return;
@@ -118,83 +76,126 @@ async function cargarEstrenos() {
     }
 }
 
-// --- NUEVA FUNCIÓN: CARGAR TODA LA TEMPORADA ---
+// --- FUNCIÓN PRINCIPAL: CARGAR TEMPORADA ---
 window.cargarTemporada = () => {
-    // Reseteamos todo
-    document.getElementById('inp').value = ""; // Limpiar texto
+    document.getElementById('inp').value = "";
     currentQuery = "";
-    currentStatus = "1"; // 1 = EN EMISIÓN (Activos)
+    currentStatus = "1"; // Filtro: EN EMISIÓN
     searchPage = 1;
     hasMoreResults = true;
     
-    const grid = document.getElementById('grid-search');
-    grid.innerHTML = '<div class="loader"></div>';
-    
-    // Cambiamos visualmente a la pestaña de búsqueda
+    // Cambiar visualmente a búsqueda
     cambiarTab('search');
     
-    console.log("[TEMPORADA] Cargando animes en emisión...");
-    cargarMasResultados(true);
+    // Limpiar grid y mostrar loader
+    const grid = document.getElementById('grid-search');
+    grid.innerHTML = '<div class="loader"></div>';
+    
+    cargarMasResultados(false); // false porque ya limpiamos manualmente
 };
 
-// --- BÚSQUEDA (TEXTO) ---
+// BÚSQUEDA NORMAL
 async function buscar() {
     const q = document.getElementById('inp').value;
-    if (!q) {
-        alert("Escribe algo para buscar");
-        return;
-    }
+    if (!q) { alert("Escribe algo..."); return; }
     currentQuery = q;
-    currentStatus = ""; // Quitamos el filtro de estado si buscamos por nombre
+    currentStatus = "";
     searchPage = 1;
     hasMoreResults = true;
     
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader"></div>';
     
-    cargarMasResultados(true);
+    cargarMasResultados(false);
 }
 
-// --- CARGAR RESULTADOS (MODIFICADO PARA STATUS) ---
-async function cargarMasResultados(limpiar) {
+// --- CARGA DE RESULTADOS (LOGICA MEJORADA) ---
+async function cargarMasResultados(fromScroll = false) {
     if (isLoadingMore || !hasMoreResults) return; 
     
-    // Si no hay query y no hay status, no cargamos nada (pantalla limpia)
-    if (!currentQuery && !currentStatus) {
-        isLoadingMore = false;
-        return;
-    }
+    // Si no hay nada configurado, salir
+    if (!currentQuery && !currentStatus) return;
 
     isLoadingMore = true;
     const grid = document.getElementById('grid-search');
     
-    let endpoint = "";
+    // Quitar el botón "Cargar Más" viejo si existe
+    const oldBtn = document.getElementById('btn-load-more');
+    if(oldBtn) oldBtn.remove();
+    
+    // Si es scroll infinito, mostrar mini loader abajo
+    if(fromScroll) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'scroll-loader';
+        loadingDiv.className = 'loader';
+        loadingDiv.style.width = '30px';
+        loadingDiv.style.height = '30px';
+        grid.parentNode.appendChild(loadingDiv);
+    }
 
-    // LÓGICA DE URL
+    let endpoint = "";
+    // URL según filtro
     if (currentStatus === "1") {
-        // Buscar animes EN EMISIÓN (Temporada)
         endpoint = `/search?status=1&order=added&page=${searchPage}`;
     } else {
-        // Buscar por NOMBRE
         endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
     }
 
     const data = await fetchData(endpoint);
     
-    if (limpiar) grid.innerHTML = '';
+    // Quitar loaders
+    if(!fromScroll) grid.innerHTML = ''; 
+    const scrollLoader = document.getElementById('scroll-loader');
+    if(scrollLoader) scrollLoader.remove();
     
     const results = data?.media || data?.animes || data || [];
-    console.log(`[SEARCH] Resultados: ${results.length}`);
     
     if (results.length > 0) {
         results.forEach(item => crearTarjeta(item, grid, 'search'));
         searchPage++;
-        hasMoreResults = results.length >= 20; 
+        
+        // Si recibimos 20 o más, asumimos que hay página siguiente
+        if (results.length >= 20) {
+            hasMoreResults = true;
+            // AGREGAR BOTÓN "CARGAR MÁS" AL FINAL
+            agregarBotonCargarMas(grid);
+        } else {
+            hasMoreResults = false;
+            // Mensaje de fin
+            const fin = document.createElement('p');
+            fin.style.gridColumn = '1 / -1';
+            fin.style.textAlign = 'center';
+            fin.style.color = '#666';
+            fin.style.padding = '20px';
+            fin.innerText = "Has llegado al final de la lista.";
+            grid.appendChild(fin);
+        }
     } else {
         hasMoreResults = false;
-        if(limpiar) grid.innerHTML = '<p>No se encontraron resultados.</p>';
+        if(!fromScroll && searchPage === 1) grid.innerHTML = '<p style="text-align:center; margin-top:20px;">No se encontraron resultados.</p>';
     }
     isLoadingMore = false;
+}
+
+function agregarBotonCargarMas(container) {
+    // Creamos un botón que ocupa todo el ancho abajo
+    const btnContainer = document.createElement('div');
+    btnContainer.id = 'btn-load-more-container';
+    btnContainer.style.gridColumn = '1 / -1'; // Ocupar toda la fila
+    btnContainer.style.textAlign = 'center';
+    btnContainer.style.padding = '20px';
+    
+    const btn = document.createElement('button');
+    btn.id = 'btn-load-more';
+    btn.className = 'load-more-btn';
+    btn.innerText = '⬇ Cargar Más Animes';
+    btn.onclick = () => {
+        btnContainer.remove(); // Se quita al hacer click
+        cargarMasResultados(true);
+    };
+    
+    btnContainer.appendChild(btn);
+    container.appendChild(btnContainer);
 }
 
 function crearTarjeta(item, container, ctx) {
@@ -212,7 +213,7 @@ function crearTarjeta(item, container, ctx) {
     container.appendChild(card);
 }
 
-// --- DETALLES Y PLAYER ---
+// DETALLES
 async function cargarDetalles(slug) {
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
@@ -276,10 +277,7 @@ async function playVideo(slug, number) {
     }
 }
 
-window.setSource = (url) => {
-    document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
-};
-
+window.setSource = (url) => { document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`; };
 window.volverALista = () => { history.back(); };
 window.cerrarDetalles = () => { history.back(); };
 window.cerrarReproductor = () => { history.back(); };
@@ -290,7 +288,6 @@ function guardarHistorial(anime) {
     hist.unshift({ slug: anime.slug, title: anime.title, cover: anime.cover });
     localStorage.setItem('animeHistory', JSON.stringify(hist.slice(0, 20)));
 }
-
 function toggleFavorite() {
     let favs = JSON.parse(localStorage.getItem('favorites') || '[]');
     const isFav = favs.some(f => f.slug === currentAnimeData.slug);
@@ -299,7 +296,6 @@ function toggleFavorite() {
     localStorage.setItem('favorites', JSON.stringify(favs));
     actualizarBotonFav();
 }
-
 function actualizarBotonFav() {
     if (!currentAnimeData) return;
     const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
@@ -307,7 +303,6 @@ function actualizarBotonFav() {
     const btn = document.getElementById('btn-fav');
     if(btn) btn.innerText = isFav ? '❤️ En Favoritos' : '🤍 Añadir Favorito';
 }
-
 window.cambiarTab = (id) => {
     document.querySelectorAll('.tab-content, .nav-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${id}`).classList.add('active');
@@ -315,27 +310,30 @@ window.cambiarTab = (id) => {
     if(id === 'favorites') renderFavorites();
     if(id === 'history') renderHistorial();
 };
-
 function renderFavorites() {
     const favs = JSON.parse(localStorage.getItem('favorites') || '[]');
     const grid = document.getElementById('grid-favorites');
     grid.innerHTML = favs.length ? '' : '<p>Sin favoritos</p>';
     favs.forEach(f => crearTarjeta(f, grid, 'fav'));
 }
-
 function renderHistorial() {
     const hist = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     const grid = document.getElementById('grid-history');
     grid.innerHTML = hist.length ? '' : '<p>Historial vacío</p>';
     hist.forEach(h => crearTarjeta(h, grid, 'hist'));
 }
-
 window.borrarHistorial = () => { localStorage.removeItem('animeHistory'); renderHistorial(); };
+window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
+window.toggleSettings = () => document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block' ? 'none' : 'block');
 
+// Scroll infinito (Como respaldo)
 window.onscroll = () => {
     if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
         if(document.getElementById('tab-search').classList.contains('active')) {
-            cargarMasResultados(false);
+            // Solo cargamos si NO hay botón manual (para no duplicar llamadas)
+            if(!document.getElementById('btn-load-more')) {
+                cargarMasResultados(true);
+            }
         }
     }
 };

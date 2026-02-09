@@ -700,3 +700,27 @@ a {
 .log-warn { color: #ffff55; }
 .log-error { color: #ff5555; font-weight: bold; background: rgba(255,0,0,0.1); }
 .log-network { color: #55ffff; }
+/* Botón de Cargar Más (Paginación Manual) */
+.load-more-btn {
+    background-color: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 15px 30px;
+    font-size: 1rem;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 80%;
+    max-width: 300px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.load-more-btn:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+.load-more-btn:active {
+    transform: scale(0.95);
+}
