@@ -1,11 +1,10 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN FINAL DEBUG (FIX SEARCH)
+// WHUSTAF WEB - VERSIÓN FINAL (FIX GENRE)
 // ==========================================
 
-// --- 1. SISTEMA DE DEPURACIÓN (NO BORRAR) ---
+// --- SISTEMA DE DEPURACIÓN (MANTENIDO) ---
 let isDebugActive = false;
 let logBuffer = [];
-
 const originalLog = console.log;
 const originalError = console.error;
 const originalWarn = console.warn;
@@ -15,9 +14,7 @@ function logToVisualConsole(msg, type) {
     const logEntry = `[${timestamp}] [${type}] ${msg}`;
     logBuffer.push(logEntry);
     if (logBuffer.length > 200) logBuffer.shift();
-
     if (!isDebugActive) return;
-
     const consoleDiv = document.getElementById('console-logs');
     if (consoleDiv) {
         const line = document.createElement('div');
@@ -27,37 +24,17 @@ function logToVisualConsole(msg, type) {
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 }
+console.log = (...args) => { originalLog(...args); logToVisualConsole(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '), 'INFO'); };
+console.warn = (...args) => { originalWarn(...args); logToVisualConsole(args.join(' '), 'WARN'); };
+console.error = (...args) => { originalError(...args); logToVisualConsole(args.join(' '), 'ERROR'); };
+window.onerror = function(msg, url, line, col, error) { console.error(`ERROR CRÍTICO: ${msg}\nEn: ${url}:${line}:${col}`); return false; };
 
-// Interceptamos la consola para mostrarla en pantalla
-console.log = (...args) => {
-    originalLog(...args);
-    logToVisualConsole(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '), 'INFO');
-};
-console.warn = (...args) => {
-    originalWarn(...args);
-    logToVisualConsole(args.join(' '), 'WARN');
-};
-console.error = (...args) => {
-    originalError(...args);
-    logToVisualConsole(args.join(' '), 'ERROR');
-};
-
-window.onerror = function(msg, url, line, col, error) {
-    console.error(`ERROR CRÍTICO: ${msg}\nEn: ${url}:${line}:${col}`);
-    return false;
-};
-
-// --- FUNCIONES UI DEBUG ---
-window.toggleSettings = () => {
-    const modal = document.getElementById('settings-modal');
-    modal.style.display = (modal.style.display === 'block') ? 'none' : 'block';
-};
-
+// --- UI DEBUG ---
+window.toggleSettings = () => { document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block') ? 'none' : 'block'; };
 window.toggleDebugMode = () => {
     const consoleDiv = document.getElementById('debug-console');
     const chk = document.getElementById('chk-debug');
     isDebugActive = !isDebugActive;
-    
     if (isDebugActive) {
         consoleDiv.style.display = 'flex';
         if(chk) chk.checked = true;
@@ -76,29 +53,12 @@ window.toggleDebugMode = () => {
         if(chk) chk.checked = false;
     }
 };
-
-window.copiarLogs = () => {
-    const text = logBuffer.join('\n');
-    navigator.clipboard.writeText(text).then(() => alert("✅ Logs copiados")).catch(e => alert("Error: " + e));
-};
-
-window.limpiarLogs = () => {
-    logBuffer = [];
-    document.getElementById('console-logs').innerHTML = '';
-};
-
-window.borrarCaches = async () => {
-    if('caches' in window){
-        const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
-        alert("Caché borrada. Recargando...");
-        window.location.reload(true);
-    }
-};
-
+window.copiarLogs = () => { navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("✅ Logs copiados")).catch(e => alert("Error: " + e)); };
+window.limpiarLogs = () => { logBuffer = []; document.getElementById('console-logs').innerHTML = ''; };
+window.borrarCaches = async () => { if('caches' in window){ const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); alert("Caché borrada. Recargando..."); window.location.reload(true); } };
 
 // ==========================================
-// --- 2. LÓGICA DE LA APLICACIÓN ---
+// --- LÓGICA DE LA APLICACIÓN ---
 // ==========================================
 
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
@@ -117,6 +77,7 @@ let currentGenre = "";
 let hasMoreResults = true; 
 let isLoadingMore = false;
 
+// MAPA DE GÉNEROS (Slugs técnicos)
 const GENRE_MAP = {
     "Acción": "accion", "Aventura": "aventura", "Comedia": "comedia", "Drama": "drama", 
     "Ecchi": "ecchi", "Fantasía": "fantasia", "Romance": "romance", "Shounen": "shounen", 
@@ -127,14 +88,12 @@ const GENRE_MAP = {
 };
 
 window.onload = () => {
-    // Actualizar SW
     if (window.location.protocol !== 'file:' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
-
     history.replaceState({ page: 'home' }, "", ""); 
     
-    console.log("Iniciando App...");
+    console.log("Iniciando App v4.5...");
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
@@ -157,6 +116,7 @@ window.onpopstate = (event) => {
 };
 
 async function fetchData(endpoint) {
+    // Normalización: Quita tildes para evitar errores de URL
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     console.log(`[NETWORK] Solicitando: ${cleanEndpoint}`);
 
@@ -169,10 +129,10 @@ async function fetchData(endpoint) {
             try {
                 let data = JSON.parse(text);
                 if (data.contents) data = JSON.parse(data.contents);
-                // LOG IMPORTANTE: Ver qué devuelve la API
-                if(data.error) console.error(`[API ERROR] ${data.message}`);
-                else console.log(`[API SUCCESS] Datos recibidos OK`);
-                
+                if(data.error) {
+                    console.error(`[API ERROR] ${data.message}`);
+                    return null;
+                }
                 return data.success ? data.data : data;
             } catch (e) { continue; }
         } catch (e) { console.warn("Proxy error"); }
@@ -204,7 +164,7 @@ window.buscarPorGenero = (genero) => {
     currentGenre = GENRE_MAP[genero] || "";
     currentQuery = ""; 
     document.getElementById('inp').value = genero;
-    console.log(`[BUSQUEDA] Genero seleccionado: ${genero} -> ID: ${currentGenre}`);
+    console.log(`[BUSQUEDA] Filtro Género: ${genero} -> ${currentGenre}`);
     searchPage = 1;
     hasMoreResults = true;
     cargarMasResultados(true);
@@ -219,7 +179,7 @@ async function buscar() {
     cargarMasResultados(true);
 }
 
-// --- ARREGLO PRINCIPAL DE BÚSQUEDA ---
+// --- RESULTADOS DE BÚSQUEDA (CORRECCIÓN CRÍTICA) ---
 async function cargarMasResultados(limpiar) {
     if (isLoadingMore || !hasMoreResults) return; 
     isLoadingMore = true;
@@ -229,13 +189,13 @@ async function cargarMasResultados(limpiar) {
 
     let endpoint = "";
     
-    // [FIX] Cambiamos /browse (que daba error 404) por /search
     if (currentGenre) {
-        endpoint = `/search?genres[]=${currentGenre}&order=added&page=${searchPage}`;
+        // [FIX] Cambiado 'genres[]' a 'genre[]' (singular)
+        endpoint = `/search?genre[]=${currentGenre}&order=added&page=${searchPage}`;
     } else if (currentQuery) {
         endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
     } else {
-        // Directorio sin filtros
+        // Directorio general
         endpoint = `/search?order=added&page=${searchPage}`;
     }
 
@@ -244,9 +204,9 @@ async function cargarMasResultados(limpiar) {
     if (limpiar) grid.innerHTML = '';
     
     const results = data?.media || data?.animes || data || [];
-    console.log(`[RESULTADOS] Cantidad: ${results.length}`);
+    console.log(`[RESULTADOS] Recibidos: ${results.length || 0}`);
     
-    if (results.length > 0) {
+    if (results && results.length > 0) {
         results.forEach(item => crearTarjeta(item, grid, 'search'));
         searchPage++;
         hasMoreResults = results.length >= 20; 
@@ -272,9 +232,8 @@ function crearTarjeta(item, container, ctx) {
     container.appendChild(card);
 }
 
-// --- DETALLES ---
+// --- DETALLES Y PLAYER ---
 async function cargarDetalles(slug) {
-    console.log(`[DETALLES] Abriendo: ${slug}`);
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
     if(history.state?.modal !== 'details') history.pushState({ modal: 'details' }, "");
@@ -392,7 +351,6 @@ function renderHistorial() {
 }
 
 window.borrarHistorial = () => { localStorage.removeItem('animeHistory'); renderHistorial(); };
-
 window.onscroll = () => {
     if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
         if(document.getElementById('tab-search').classList.contains('active')) {
