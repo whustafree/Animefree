@@ -1,47 +1,5 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN HOME COMPLETO
-// ==========================================
-
-// --- DEPURACIÓN (MANTENIDA) ---
-let isDebugActive = false;
-let logBuffer = [];
-const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
-function logToVisualConsole(msg, type) {
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = `[${timestamp}] [${type}] ${msg}`;
-    logBuffer.push(logEntry);
-    if(logBuffer.length > 200) logBuffer.shift();
-    if (!isDebugActive) return;
-    const consoleDiv = document.getElementById('console-logs');
-    if (consoleDiv) {
-        const line = document.createElement('div');
-        line.className = `log-line log-${type.toLowerCase()}`;
-        line.textContent = logEntry;
-        consoleDiv.appendChild(line);
-        consoleDiv.scrollTop = consoleDiv.scrollHeight;
-    }
-}
-console.log = (...args) => { originalLog(...args); logToVisualConsole(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '), 'INFO'); };
-console.error = (...args) => { originalError(...args); logToVisualConsole(args.join(' '), 'ERROR'); };
-window.onerror = (msg, url, line) => { console.error(`CRASH: ${msg} (${line})`); return false; };
-
-// --- UI HELPERS ---
-window.toggleSettings = () => document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block' ? 'none' : 'block');
-window.toggleDebugMode = () => {
-    isDebugActive = !isDebugActive;
-    const div = document.getElementById('debug-console');
-    const chk = document.getElementById('chk-debug');
-    div.style.display = isDebugActive ? 'flex' : 'none';
-    if(chk) chk.checked = isDebugActive;
-    if(isDebugActive) console.log("--- MODO DEBUG ACTIVADO ---");
-};
-window.copiarLogs = () => navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("Copiado"));
-window.limpiarLogs = () => { logBuffer = []; document.getElementById('console-logs').innerHTML = ''; };
-window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
-
-
-// ==========================================
-// --- LÓGICA PRINCIPAL ---
+// WHUSTAF WEB - VERSIÓN TEMPORADA (BOTÓN LOAD MORE)
 // ==========================================
 
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
@@ -52,29 +10,23 @@ const PROXIES = [
     (u) => `https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
-// VARIABLES GLOBALES
+// VARIABLES
 let currentAnimeData = null;
 let currentEpisodeIndex = -1;
+let searchPage = 1; 
+let currentQuery = ""; 
+let currentStatus = ""; 
+let hasMoreResults = true; 
+let isLoadingMore = false;
 
-// ESTADO DE LAS LISTAS
-let latestPage = 1;
-let seasonPage = 1;
-let searchPage = 1;
-let currentQuery = "";
-let isSearchLoading = false;
-
+// INICIO
 window.onload = () => {
     if (window.location.protocol !== 'file:' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
     history.replaceState({ page: 'home' }, "", ""); 
     
-    console.log("Iniciando App Home Completo...");
-    
-    // Cargar ambas listas al inicio
-    cargarMasCapitulos(); // Capítulos recientes
-    cargarMasTemporada(); // Animes de temporada
-    
+    cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
 };
@@ -93,10 +45,10 @@ window.onpopstate = () => {
     }
 };
 
+// FETCH CON PROXIES
 async function fetchData(endpoint) {
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    console.log(`[NET] Fetch: ${cleanEndpoint}`);
-
+    
     for (const wrap of PROXIES) {
         try {
             const resp = await fetch(wrap(API_BASE + cleanEndpoint));
@@ -110,123 +62,158 @@ async function fetchData(endpoint) {
             } catch (e) { continue; }
         } catch (e) { console.warn("Proxy fail"); }
     }
-    console.error("Todos los proxies fallaron");
     return null;
 }
 
-// --- SECCIÓN 1: CAPÍTULOS RECIENTES (CON PAGINACIÓN) ---
-async function cargarMasCapitulos() {
+// ESTRENOS
+async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
-    // Nota: La API de Ahmed a veces no pagina 'latest-episodes' correctamente, 
-    // pero intentaremos con ?page=X que es el estándar.
-    const data = await fetchData(`/list/latest-episodes?page=${latestPage}`);
-    
-    if (data && data.length > 0) {
+    if (!grid) return;
+    const data = await fetchData('/list/latest-episodes');
+    if (data) {
+        grid.innerHTML = '';
         data.forEach(item => crearTarjeta(item, grid, 'latest'));
-        latestPage++;
-    } else {
-        console.log("No hay más capítulos recientes");
     }
 }
 
-// --- SECCIÓN 2: TEMPORADA COMPLETA (EN EMISIÓN) ---
-async function cargarMasTemporada() {
-    const grid = document.getElementById('grid-season');
+// --- FUNCIÓN PRINCIPAL: CARGAR TEMPORADA ---
+window.cargarTemporada = () => {
+    document.getElementById('inp').value = "";
+    currentQuery = "";
+    currentStatus = "1"; // Filtro: EN EMISIÓN
+    searchPage = 1;
+    hasMoreResults = true;
     
-    // Usamos el filtro 'status=1' (En emisión) ordenado por 'added'
-    const endpoint = `/search?status=1&order=added&page=${seasonPage}`;
-    const data = await fetchData(endpoint);
+    // Cambiar visualmente a búsqueda
+    cambiarTab('search');
     
-    // La estructura de respuesta de /search puede variar (data.media o array directo)
-    const results = data?.media || data?.animes || data || [];
+    // Limpiar grid y mostrar loader
+    const grid = document.getElementById('grid-search');
+    grid.innerHTML = '<div class="loader"></div>';
     
-    if (results && results.length > 0) {
-        results.forEach(item => crearTarjeta(item, grid, 'anime')); // Contexto 'anime' para Series
-        seasonPage++;
-    } else {
-        console.log("Fin de la temporada");
-        // Opcional: Ocultar botón si no hay más
-    }
-}
+    cargarMasResultados(false); // false porque ya limpiamos manualmente
+};
 
-// --- BÚSQUEDA (SOLO TEXTO) ---
+// BÚSQUEDA NORMAL
 async function buscar() {
     const q = document.getElementById('inp').value;
-    if (!q) return;
+    if (!q) { alert("Escribe algo..."); return; }
     currentQuery = q;
+    currentStatus = "";
     searchPage = 1;
+    hasMoreResults = true;
     
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader"></div>';
     
-    cargarMasBusqueda(true);
+    cargarMasResultados(false);
 }
 
-async function cargarMasBusqueda(limpiar) {
-    if (isSearchLoading) return;
-    isSearchLoading = true;
+// --- CARGA DE RESULTADOS (LOGICA MEJORADA) ---
+async function cargarMasResultados(fromScroll = false) {
+    if (isLoadingMore || !hasMoreResults) return; 
     
+    // Si no hay nada configurado, salir
+    if (!currentQuery && !currentStatus) return;
+
+    isLoadingMore = true;
     const grid = document.getElementById('grid-search');
-    const endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
+    
+    // Quitar el botón "Cargar Más" viejo si existe
+    const oldBtn = document.getElementById('btn-load-more');
+    if(oldBtn) oldBtn.remove();
+    
+    // Si es scroll infinito, mostrar mini loader abajo
+    if(fromScroll) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'scroll-loader';
+        loadingDiv.className = 'loader';
+        loadingDiv.style.width = '30px';
+        loadingDiv.style.height = '30px';
+        grid.parentNode.appendChild(loadingDiv);
+    }
+
+    let endpoint = "";
+    // URL según filtro
+    if (currentStatus === "1") {
+        endpoint = `/search?status=1&order=added&page=${searchPage}`;
+    } else {
+        endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
+    }
+
     const data = await fetchData(endpoint);
     
-    if (limpiar) grid.innerHTML = '';
+    // Quitar loaders
+    if(!fromScroll) grid.innerHTML = ''; 
+    const scrollLoader = document.getElementById('scroll-loader');
+    if(scrollLoader) scrollLoader.remove();
     
     const results = data?.media || data?.animes || data || [];
     
     if (results.length > 0) {
         results.forEach(item => crearTarjeta(item, grid, 'search'));
         searchPage++;
-        // Agregar botón cargar más al buscador si quieres, o dejar scroll
-        agregarBotonBusqueda(grid);
+        
+        // Si recibimos 20 o más, asumimos que hay página siguiente
+        if (results.length >= 20) {
+            hasMoreResults = true;
+            // AGREGAR BOTÓN "CARGAR MÁS" AL FINAL
+            agregarBotonCargarMas(grid);
+        } else {
+            hasMoreResults = false;
+            // Mensaje de fin
+            const fin = document.createElement('p');
+            fin.style.gridColumn = '1 / -1';
+            fin.style.textAlign = 'center';
+            fin.style.color = '#666';
+            fin.style.padding = '20px';
+            fin.innerText = "Has llegado al final de la lista.";
+            grid.appendChild(fin);
+        }
     } else {
-        if(limpiar) grid.innerHTML = '<p>Sin resultados.</p>';
+        hasMoreResults = false;
+        if(!fromScroll && searchPage === 1) grid.innerHTML = '<p style="text-align:center; margin-top:20px;">No se encontraron resultados.</p>';
     }
-    isSearchLoading = false;
+    isLoadingMore = false;
 }
 
-function agregarBotonBusqueda(grid) {
-    const old = document.getElementById('btn-more-search');
-    if(old) old.remove();
+function agregarBotonCargarMas(container) {
+    // Creamos un botón que ocupa todo el ancho abajo
+    const btnContainer = document.createElement('div');
+    btnContainer.id = 'btn-load-more-container';
+    btnContainer.style.gridColumn = '1 / -1'; // Ocupar toda la fila
+    btnContainer.style.textAlign = 'center';
+    btnContainer.style.padding = '20px';
     
-    const div = document.createElement('div');
-    div.id = 'btn-more-search';
-    div.style.gridColumn = '1 / -1';
-    div.style.textAlign = 'center';
-    div.innerHTML = `<button class="load-more-btn" onclick="cargarMasBusqueda(false)">⬇ Más Resultados</button>`;
-    grid.appendChild(div);
+    const btn = document.createElement('button');
+    btn.id = 'btn-load-more';
+    btn.className = 'load-more-btn';
+    btn.innerText = '⬇ Cargar Más Animes';
+    btn.onclick = () => {
+        btnContainer.remove(); // Se quita al hacer click
+        cargarMasResultados(true);
+    };
+    
+    btnContainer.appendChild(btn);
+    container.appendChild(btnContainer);
 }
 
-// --- CREAR TARJETAS ---
 function crearTarjeta(item, container, ctx) {
     const card = document.createElement('div'); 
     card.className = 'anime-card';
-    
-    // Diferenciar entre Episodio (latest) y Serie (anime/search)
-    let metaInfo = "";
-    if (ctx === 'latest') {
-        metaInfo = `Ep ${item.number}`;
-    } else {
-        metaInfo = item.type || 'Anime';
-    }
-
-    card.innerHTML = `<img src="${item.cover}"><div class="info"><span class="title">${item.title}</span><div class="meta">${metaInfo}</div></div>`;
+    const meta = ctx === 'latest' ? `Ep ${item.number}` : (item.type || 'Anime');
+    card.innerHTML = `<img src="${item.cover}"><div class="info"><span class="title">${item.title}</span><div class="meta">${meta}</div></div>`;
     
     card.onclick = () => {
         let slug = item.animeSlug || item.slug || item.id;
         if (!slug) return;
-        
-        // Si es un episodio, limpiamos el slug para ir a la SERIE
-        if (ctx === 'latest' || slug.includes('-episodio-')) {
-            slug = slug.replace(/-episodio-\d+$/, '').replace(/-\d+$/, '');
-        }
-        
+        slug = slug.replace(/-episodio-\d+$/, '').replace(/-\d+$/, '');
         cargarDetalles(slug);
     };
     container.appendChild(card);
 }
 
-// --- DETALLES Y PLAYER ---
+// DETALLES
 async function cargarDetalles(slug) {
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
@@ -336,3 +323,17 @@ function renderHistorial() {
     hist.forEach(h => crearTarjeta(h, grid, 'hist'));
 }
 window.borrarHistorial = () => { localStorage.removeItem('animeHistory'); renderHistorial(); };
+window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
+window.toggleSettings = () => document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block' ? 'none' : 'block');
+
+// Scroll infinito (Como respaldo)
+window.onscroll = () => {
+    if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+        if(document.getElementById('tab-search').classList.contains('active')) {
+            // Solo cargamos si NO hay botón manual (para no duplicar llamadas)
+            if(!document.getElementById('btn-load-more')) {
+                cargarMasResultados(true);
+            }
+        }
+    }
+};
