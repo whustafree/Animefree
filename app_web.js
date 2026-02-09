@@ -16,12 +16,30 @@ let currentGenre = "";
 let hasMoreResults = true; 
 let isLoadingMore = false;
 
-// Mapa de Géneros (Slug técnico de la API)
+// Mapa de Géneros EXACTO para la API (basado en AnimeFLV)
 const GENRE_MAP = {
-    "Acción": "accion", "Aventuras": "aventuras", "Comedia": "comedia", "Drama": "drama", 
-    "Ecchi": "ecchi", "Fantasía": "fantasia", "Romance": "romance", "Shounen": "shounen", 
-    "Terror": "terror", "Isekai": "isekai", "Sobrenatural": "sobrenatural", "Escolares": "escolares",
-    "Misterio": "misterio", "Psicológico": "psicologico", "Ciencia Ficción": "ciencia-ficcion"
+    "Acción": "accion",
+    "Aventura": "aventura",         // Corregido: antes era "aventuras"
+    "Comedia": "comedia",
+    "Drama": "drama",
+    "Ecchi": "ecchi",
+    "Fantasía": "fantasia",
+    "Romance": "romance",
+    "Shounen": "shounen",
+    "Terror": "terror",
+    "Isekai": "isekai",             // Nota: Si falla, probar sin esto, no es oficial clásico
+    "Sobrenatural": "sobrenatural",
+    "Escolares": "escolares",
+    "Misterio": "misterio",
+    "Psicológico": "psicologico",
+    "Ciencia Ficción": "ciencia-ficcion",
+    "Seinen": "seinen",
+    "Shoujo": "shoujo",
+    "Recuentos de la vida": "recuentos-de-la-vida", // Muy importante
+    "Deportes": "deportes",
+    "Música": "musica",
+    "Mecha": "mecha",
+    "Artes Marciales": "artes-marciales"
 };
 
 // --- INICIO ---
