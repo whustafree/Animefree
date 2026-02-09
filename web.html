@@ -24,10 +24,10 @@
     <div id="tab-search" class="tab-content">
         <div class="search-header-fixed">
             <div class="search-wrapper">
-                <input type="text" id="inp" placeholder="Escribe el nombre del anime..." autocomplete="off">
+                <input type="text" id="inp" placeholder="Buscar anime..." autocomplete="off">
                 <button onclick="buscar()">🔍</button>
             </div>
-            </div>
+        </div>
         <div class="content-body" style="padding-top: 80px;">
             <div id="grid-search" class="grid-container">
                 <p style="text-align:center; color:#666; margin-top:20px;">Utiliza el buscador para encontrar animes.</p>
@@ -54,14 +54,19 @@
         <div class="modal-content" style="margin-top: 60px; background: #222;">
             <button class="close-btn" onclick="toggleSettings()">✕</button>
             <h2>⚙️ Configuración</h2>
+            
             <div class="settings-option">
                 <h3>🛠️ Sistema</h3>
                 <label class="toggle-switch">
                     <input type="checkbox" id="chk-debug" onchange="toggleDebugMode()">
                     <span style="margin-left: 10px;">Consola de Errores</span>
                 </label>
-                <br><br>
-                <button class="primary-btn" onclick="borrarCaches()">Limpiar Caché</button>
+            </div>
+
+            <div class="settings-option" style="border-top: 1px solid #444; padding-top: 15px;">
+                <h3>🗑️ Mantenimiento</h3>
+                <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 10px;">Si la web falla o no carga los cambios, usa este botón:</p>
+                <button class="primary-btn" style="background-color: #d32f2f;" onclick="borrarCaches()">🧹 Limpiar Caché y Recargar</button>
             </div>
         </div>
     </div>
@@ -116,6 +121,6 @@
         <button onclick="cambiarTab('history')" class="nav-btn" id="nav-history">🕒</button>
     </nav>
 
-    <script src="app_web.js?v=clean_v9"></script>
+    <script src="app_web.js?v=cache_restore"></script>
 </body>
 </html>

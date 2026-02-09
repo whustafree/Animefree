@@ -1,5 +1,5 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN ESTABLE (SOLO TEXTO)
+// WHUSTAF WEB - VERSIÓN ESTABLE CON LIMPIEZA
 // ==========================================
 
 // --- DEPURACIÓN ---
@@ -38,7 +38,19 @@ window.toggleDebugMode = () => {
 };
 window.copiarLogs = () => navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("Copiado"));
 window.limpiarLogs = () => { logBuffer = []; document.getElementById('console-logs').innerHTML = ''; };
-window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
+
+// --- FUNCIÓN RECUPERADA: BORRAR CACHÉ ---
+window.borrarCaches = async () => {
+    if('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        alert("✅ Caché eliminada correctamente. La página se recargará ahora.");
+        window.location.reload(true);
+    } else {
+        alert("Tu navegador no soporta caché avanzada, pero recargaremos igual.");
+        window.location.reload(true);
+    }
+};
 
 
 // ==========================================
@@ -61,6 +73,7 @@ let hasMoreResults = true;
 let isLoadingMore = false;
 
 window.onload = () => {
+    // Intentar actualización automática del SW
     if (window.location.protocol !== 'file:' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
@@ -87,7 +100,6 @@ window.onpopstate = () => {
 };
 
 async function fetchData(endpoint) {
-    // Solo permitimos caracteres básicos en la URL para evitar errores
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     console.log(`[NET] Fetch: ${cleanEndpoint}`);
 
@@ -140,7 +152,6 @@ async function buscar() {
 async function cargarMasResultados(limpiar) {
     if (isLoadingMore || !hasMoreResults) return; 
     
-    // Si no hay texto de búsqueda, no hacemos nada (Modo limpio)
     if (!currentQuery) {
         isLoadingMore = false;
         return;
@@ -149,7 +160,6 @@ async function cargarMasResultados(limpiar) {
     isLoadingMore = true;
     const grid = document.getElementById('grid-search');
     
-    // Endpoint simple y directo de búsqueda
     const endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
 
     const data = await fetchData(endpoint);
