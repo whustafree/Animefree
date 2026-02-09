@@ -1,295 +1,288 @@
 // ==========================================
-// WHUSTAF TV - VERSIÓN FINAL CON DEBUG
-// ==========================================
-
-// --- 1. SISTEMA DE DEPURACIÓN EN PANTALLA ---
-let isDebugActive = false;
-let logBuffer = [];
-const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
-
-function logToVisualConsole(msg, type) {
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = `[${timestamp}] [${type}] ${msg}`;
-    logBuffer.push(logEntry);
-    if(logBuffer.length > 50) logBuffer.shift(); // Menos buffer en TV para memoria
-    if (!isDebugActive) return;
-    
-    const consoleDiv = document.getElementById('console-logs');
-    if (consoleDiv) {
-        const line = document.createElement('div');
-        line.className = `log-${type.toLowerCase()}`;
-        line.textContent = logEntry;
-        consoleDiv.appendChild(line);
-        consoleDiv.scrollTop = consoleDiv.scrollHeight;
-    }
-}
-console.log = (...args) => { originalLog(...args); logToVisualConsole(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '), 'INFO'); };
-console.error = (...args) => { originalError(...args); logToVisualConsole(args.join(' '), 'ERROR'); };
-window.onerror = (msg, url, line) => { console.error(`CRASH: ${msg} (${line})`); return false; };
-
-window.toggleDebugMode = () => {
-    isDebugActive = !isDebugActive;
-    document.getElementById('debug-console').style.display = isDebugActive ? 'flex' : 'none';
-    if(isDebugActive) console.log("--- CONSOLA TV ACTIVADA ---");
-};
-window.limpiarLogs = () => { logBuffer = []; document.getElementById('console-logs').innerHTML = ''; };
-
-
-// ==========================================
-// --- 2. LÓGICA TV ---
+// WHUSTAF TV - MOTOR INMERSIVO
 // ==========================================
 
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
-
 const PROXIES = [ 
     (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
     (u) => `https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
+// --- NETWORKING ---
 async function fetchData(endpoint) {
-    // Normalización vital para evitar errores 404
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    console.log(`[NET] ${cleanEndpoint}`);
-
     for (const wrap of PROXIES) {
         try {
             const resp = await fetch(wrap(API_BASE + cleanEndpoint));
             if (!resp.ok) continue;
-            
-            const text = await resp.text();
-            try {
-                let data = JSON.parse(text);
-                if (data.contents) data = JSON.parse(data.contents);
-                return data.success ? data.data : data;
-            } catch (e) { continue; }
-        } catch (e) { console.warn("Proxy fail"); }
+            let data = JSON.parse(await resp.text());
+            if (data.contents) data = JSON.parse(data.contents);
+            return data.success ? data.data : data;
+        } catch (e) {}
     }
-    console.error("Fallaron todos los proxies");
     return null;
 }
 
-let currentTVAnime = null;
+let currentAnime = null;
 
 window.onload = () => {
-    // Actualizar SW
+    // Service Worker Update
     if (window.location.protocol !== 'file:' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
-
-    tvTab('home');
-    tvCargarInicio();
     
-    setTimeout(() => {
-        const home = document.getElementById('tv-home');
-        if(home) home.focus();
-    }, 1000);
+    // Iniciar
+    loadView('home');
+    cargarHome();
+    
+    // Escuchar el input de búsqueda en tiempo real (opcional) o enter
+    document.getElementById('search-input').addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') ejecutarBusqueda();
+    });
 };
 
-function tvTab(id) {
-    document.querySelectorAll('.tv-view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.tv-link').forEach(l => l.classList.remove('active'));
+// --- NAVEGACIÓN VISTAS ---
+window.loadView = (id) => {
+    // Ocultar todas
+    document.getElementById('view-home').style.display = 'none';
+    document.getElementById('view-search').style.display = 'none';
+    document.getElementById('view-favs').style.display = 'none';
     
-    const view = document.getElementById(`view-${id}`);
-    const btn = document.getElementById(`tv-${id}`); // Asegúrate de que los IDs coincidan en HTML
+    // Desactivar botones nav
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     
-    if(view) view.classList.add('active');
-    if(btn) btn.classList.add('active'); // Opcional si usas IDs en los botones
+    // Activar seleccionada
+    document.getElementById(`nav-${id}`).classList.add('active');
     
-    if(id === 'search') setTimeout(() => document.getElementById('tv-search-input').focus(), 300);
-    if(id === 'favorites') renderGridLocal('favorites', 'tv-favorites-grid');
-    if(id === 'history') renderGridLocal('animeHistory', 'tv-history-grid');
-}
+    if(id === 'home') {
+        document.getElementById('view-home').style.display = 'block';
+        setTimeout(() => {
+            // Intentar enfocar la primera tarjeta
+            const first = document.querySelector('#row-latest .card');
+            if(first) first.focus();
+        }, 100);
+    } 
+    else if(id === 'search') {
+        document.getElementById('view-search').style.display = 'flex'; // flex para layout
+        document.getElementById('search-input').focus();
+    }
+    else if(id === 'favs') {
+        document.getElementById('view-favs').style.display = 'flex';
+        renderFavsPage();
+    }
+};
 
-// INICIO
-async function tvCargarInicio() {
+// --- HOME ---
+async function cargarHome() {
+    const row = document.getElementById('row-latest');
+    row.innerHTML = '<div class="loader"></div>';
+    
     const data = await fetchData('/list/latest-episodes');
+    row.innerHTML = '';
     
-    if (data && data.length > 0) {
-        const hero = data[0];
-        document.getElementById('hero-title').innerText = hero.title;
-        document.getElementById('hero-desc').innerText = `Episodio ${hero.number}`;
-        document.getElementById('hero-bg').style.backgroundImage = `url('${hero.cover}')`;
-        
-        document.getElementById('hero-play').onclick = () => {
-            // FIX: Limpiar slug para obtener la serie, no el episodio
-            let s = hero.animeSlug || hero.slug;
-            s = s.replace(/-episodio-\d+$/, '').replace(/-\d+$/, '');
-            tvOpenDetails(s);
-        };
-
-        const row = document.getElementById('row-latest');
-        row.innerHTML = '';
+    if (data) {
+        // Precargar el Hero con el primer item
+        updateHero(data[0]);
         
         data.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'anime-card focusable';
-            card.tabIndex = 0;
-            card.innerHTML = `<img src="${item.cover}"><div class="info">${item.title}</div>`;
-            
-            card.onclick = () => {
-                // FIX: Limpieza de slug aquí también
-                let s = item.animeSlug || item.slug;
-                s = s.replace(/-episodio-\d+$/, '').replace(/-\d+$/, '');
-                tvOpenDetails(s);
-            };
-            
-            card.onkeydown = (e) => { if (e.key === 'Enter') card.click(); };
+            const card = createCard(item, 'latest');
             row.appendChild(card);
         });
-
-        renderRowLocal('favorites', 'row-favs');
+        
+        renderRowFavs();
     }
 }
 
-// BUSCADOR
-async function tvBuscar() {
-    const q = document.getElementById('tv-search-input').value;
-    if(!q) return;
-
-    const grid = document.getElementById('tv-search-results');
-    grid.innerHTML = '<p style="color:white;padding:20px;">Cargando...</p>';
+// --- BUSCADOR ---
+async function ejecutarBusqueda() {
+    const q = document.getElementById('search-input').value;
+    const grid = document.getElementById('search-results');
+    grid.innerHTML = '<div class="loader"></div>';
     
     const data = await fetchData(`/search?query=${encodeURIComponent(q)}`);
     grid.innerHTML = '';
     
     const results = data?.media || data?.animes || data || [];
-
-    if (results.length > 0) {
+    
+    if(results.length > 0) {
         results.forEach(item => {
-            const card = document.createElement('div'); 
-            card.className = 'anime-card focusable'; 
-            card.tabIndex = 0;
-            card.innerHTML = `<img src="${item.cover}"><div class="info">${item.title}</div>`;
-            
-            card.onclick = () => tvOpenDetails(item.slug || item.id);
-            card.onkeydown = (e) => { if (e.key === 'Enter') card.click(); };
+            const card = createCard(item, 'search');
             grid.appendChild(card);
         });
+        // Enfocar primer resultado
+        setTimeout(() => { if(grid.firstChild) grid.firstChild.focus(); }, 100);
     } else {
-        grid.innerHTML = '<p style="color:#aaa;padding:20px;">Sin resultados</p>';
+        grid.innerHTML = '<p>No se encontraron resultados</p>';
     }
 }
 
-// DETALLES (AQUÍ ESTABA EL ERROR)
-async function tvOpenDetails(slug) {
-    console.log(`Abriendo detalles: ${slug}`);
+// --- CREACIÓN DE TARJETAS (INTELIGENTES) ---
+function createCard(item, context) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.tabIndex = 0; // Hace que sea seleccionable con el control remoto
+    card.style.backgroundImage = `url('${item.cover}')`;
     
-    // Resetear vista previa
-    document.getElementById('tv-det-title').innerText = "Cargando...";
-    document.getElementById('tv-episodes-list').innerHTML = '';
-    document.getElementById('tv-details-modal').style.display = 'flex';
+    // DATA PARA EL HERO (Se guarda en el elemento DOM)
+    card.dataset.title = item.title;
+    card.dataset.cover = item.cover;
+    // Si es episodio, mostrar número. Si es serie, mostrar tipo.
+    card.dataset.desc = context === 'latest' ? `Episodio ${item.number} - Nuevo` : (item.synopsis || "Anime");
+    
+    // EVENTO FOCO: Cuando pasas por encima con el control
+    card.onfocus = () => {
+        updateHero({
+            title: card.dataset.title,
+            cover: card.dataset.cover,
+            desc: card.dataset.desc
+        });
+    };
+    
+    // EVENTO CLICK: Abrir detalles
+    card.onclick = () => {
+        let slug = item.animeSlug || item.slug || item.id;
+        // Limpieza de slug crítica
+        slug = slug.replace(/-episodio-\d+$/, '').replace(/-\d+$/, '');
+        openDetails(slug);
+    };
+    
+    // Tecla Enter
+    card.onkeydown = (e) => { if(e.key === 'Enter') card.click(); };
+    
+    return card;
+}
+
+// --- ACTUALIZAR FONDO Y TITULO (HERO) ---
+function updateHero(info) {
+    if(!info) return;
+    document.getElementById('app-background').style.backgroundImage = `url('${info.cover}')`;
+    document.getElementById('meta-title').innerText = info.title;
+    
+    // Si tenemos descripcion real (del dataset), la usamos. Si no, un placeholder.
+    // Nota: La API lista no da sinopsis, solo titulo e imagen.
+    // Solo al entrar al detalle tenemos sinopsis completa.
+    const desc = info.desc || (info.number ? `Episodio ${info.number}` : "Anime");
+    document.getElementById('meta-desc').innerText = desc;
+}
+
+// --- DETALLES ---
+async function openDetails(slug) {
+    const modal = document.getElementById('modal-detail');
+    modal.style.display = 'flex';
+    document.getElementById('mod-title').innerText = "Cargando...";
+    document.getElementById('mod-episodes').innerHTML = '';
     
     const info = await fetchData(`/anime/${slug}`);
     
-    if (info) {
-        currentTVAnime = info;
+    if(info) {
+        currentAnime = info;
+        document.getElementById('mod-img').src = info.cover;
+        document.getElementById('mod-title').innerText = info.title;
+        document.getElementById('mod-desc').innerText = (info.synopsis || "Sin descripción").substring(0, 400) + '...';
         
-        // FIX: Verificar si info.episodes existe antes de usar forEach
-        if (info.episodes && Array.isArray(info.episodes)) {
-            info.episodes.sort((a,b)=>parseFloat(a.number)-parseFloat(b.number));
-        } else {
-            console.error("No episodes found for this anime");
-            // Puedes mostrar un mensaje en la UI si quieres
-        }
+        // Botones
+        const btnPlay = document.getElementById('btn-play');
+        const btnFav = document.getElementById('btn-fav');
         
-        document.getElementById('tv-det-img').src = info.cover;
-        document.getElementById('tv-det-title').innerText = info.title;
-        document.getElementById('tv-det-desc').innerText = (info.synopsis || "").substring(0,300)+'...';
-        
-        const btnPlay = document.getElementById('tv-btn-play');
-        const btnFav = document.getElementById('tv-btn-fav');
-        
+        // Logica Play (Episodio 1 o el ultimo visto)
         btnPlay.onclick = () => {
-            if(info.episodes && info.episodes[0]) tvPlay(info.episodes[0].slug);
+            if(info.episodes && info.episodes.length > 0) {
+                // Ordenar por numero
+                info.episodes.sort((a,b) => parseFloat(a.number) - parseFloat(b.number));
+                playEpisode(info.episodes[0].slug);
+            }
         };
         
-        btnFav.onclick = () => tvToggleFav(info);
-        btnFav.innerText = tvIsFav(info.slug) ? "💔 Quitar" : "❤️ Favorito";
-
-        const list = document.getElementById('tv-episodes-list'); 
+        btnFav.innerText = isFav(info.slug) ? "💔 Quitar" : "❤️ Añadir";
+        btnFav.onclick = () => toggleFav(info);
         
-        // Generar botones de episodios con seguridad
-        if (info.episodes) {
+        // Episodios
+        const grid = document.getElementById('mod-episodes');
+        if(info.episodes) {
+            info.episodes.sort((a,b) => parseFloat(a.number) - parseFloat(b.number));
             info.episodes.forEach(ep => {
-                const btn = document.createElement('button'); 
-                btn.className = 'tv-ep-btn focusable'; 
-                btn.tabIndex = 0;
-                btn.innerText = `Ep ${ep.number}`;
-                btn.onclick = () => tvPlay(ep.slug);
-                btn.onkeydown = (e) => { if (e.key === 'Enter') btn.click(); };
-                list.appendChild(btn);
+                const btn = document.createElement('button');
+                btn.className = 'ep-btn';
+                btn.innerText = ep.number;
+                btn.onclick = () => playEpisode(ep.slug);
+                grid.appendChild(btn);
             });
         }
-
-        tvAddToHistory(info);
-        setTimeout(() => btnPlay.focus(), 200);
-    } else {
-        console.error("Error cargando info del anime");
-        document.getElementById('tv-det-title').innerText = "Error de Carga";
+        
+        setTimeout(() => btnPlay.focus(), 100);
     }
 }
 
-// PLAYER
-async function tvPlay(slug) {
-    const player = document.getElementById('tv-player');
-    const container = document.getElementById('tv-video-container');
-    player.style.display = 'block';
-    container.innerHTML = '<h2 style="color:white;text-align:center;padding-top:20%;">Cargando...</h2>';
+window.closeModal = () => {
+    document.getElementById('modal-detail').style.display = 'none';
+    // Devolver foco al home (o donde estaba)
+    const active = document.querySelector('.nav-btn.active');
+    if(active && active.id === 'nav-home') {
+        const first = document.querySelector('#row-latest .card');
+        if(first) first.focus();
+    }
+};
+
+// --- REPRODUCTOR ---
+async function playEpisode(slug) {
+    document.getElementById('player-overlay').style.display = 'block';
+    const container = document.getElementById('player-container');
+    container.innerHTML = '<h2 style="color:white; text-align:center; padding-top:20%;">Cargando Servidores...</h2>';
     
     const data = await fetchData(`/anime/episode/${slug}`);
     
     if(data && data.servers) {
         const url = data.servers[0].embed || data.servers[0].url;
         container.innerHTML = `<iframe src="${url}" style="width:100%;height:100%;border:none;" allowfullscreen></iframe>`;
-        setTimeout(() => document.querySelector('.tv-close-player').focus(), 500);
+        setTimeout(() => document.querySelector('.close-player').focus(), 500);
     } else {
-        container.innerHTML = '<h2 style="color:white;text-align:center;">No hay video disponible</h2>';
+        container.innerHTML = '<h2 style="color:white; text-align:center;">Error: No video</h2>';
     }
 }
 
-// UTILIDADES
-function closeTvDetails() { document.getElementById('tv-details-modal').style.display = 'none'; document.getElementById('tv-home').focus(); }
-function closeTvPlayer() { document.getElementById('tv-player').style.display = 'none'; document.getElementById('tv-video-container').innerHTML=''; }
+window.closePlayer = () => {
+    document.getElementById('player-overlay').style.display = 'none';
+    document.getElementById('player-container').innerHTML = '';
+};
 
-function renderRowLocal(key, id) {
-    const list = JSON.parse(localStorage.getItem(key)||'[]');
-    const c = document.getElementById(id); 
-    if(!c) return;
-    c.innerHTML = list.length ? '' : '<p style="margin-left:20px;color:#666">Vacío</p>';
-    list.forEach(i => {
-        const card = document.createElement('div'); card.className='anime-card focusable'; card.tabIndex=0;
-        card.innerHTML=`<img src="${i.cover}"><div class="info">${i.title}</div>`;
-        card.onclick=()=>tvOpenDetails(i.slug);
-        card.onkeydown=(e)=>{if(e.key==='Enter')card.click()};
-        c.appendChild(card);
+// --- FAVORITOS & LOCAL ---
+function renderRowFavs() {
+    const list = JSON.parse(localStorage.getItem('favorites')||'[]');
+    const row = document.getElementById('row-favs');
+    row.innerHTML = '';
+    list.forEach(item => {
+        const card = createCard(item, 'fav');
+        row.appendChild(card);
     });
 }
-function renderGridLocal(key, id) { renderRowLocal(key, id); }
 
-function tvIsFav(slug) { return JSON.parse(localStorage.getItem('favorites')||'[]').some(i => i.slug === slug); }
-function tvToggleFav(anime) {
+function renderFavsPage() {
+    const list = JSON.parse(localStorage.getItem('favorites')||'[]');
+    const grid = document.getElementById('favs-grid');
+    grid.innerHTML = '';
+    if(list.length === 0) grid.innerHTML = '<p>No tienes favoritos</p>';
+    list.forEach(item => {
+        const card = createCard(item, 'fav');
+        grid.appendChild(card);
+    });
+    setTimeout(() => { if(grid.firstChild) grid.firstChild.focus(); }, 100);
+}
+
+function isFav(slug) { return JSON.parse(localStorage.getItem('favorites')||'[]').some(i=>i.slug===slug); }
+function toggleFav(anime) {
     let list = JSON.parse(localStorage.getItem('favorites')||'[]');
-    if(tvIsFav(anime.slug)) list = list.filter(i => i.slug !== anime.slug);
-    else list.push({ slug: anime.slug, title: anime.title, cover: anime.cover });
+    if(isFav(anime.slug)) list = list.filter(i=>i.slug!==anime.slug);
+    else list.push({slug:anime.slug, title:anime.title, cover:anime.cover});
     localStorage.setItem('favorites', JSON.stringify(list));
-    document.getElementById('tv-btn-fav').innerText = tvIsFav(anime.slug) ? "💔 Quitar" : "❤️ Favorito";
-    renderRowLocal('favorites', 'row-favs');
-    renderGridLocal('favorites', 'tv-favorites-grid');
-}
-function tvAddToHistory(anime) {
-    let list = JSON.parse(localStorage.getItem('animeHistory')||'[]');
-    list = list.filter(i => i.slug !== anime.slug);
-    list.unshift({ slug: anime.slug, title: anime.title, cover: anime.cover });
-    localStorage.setItem('animeHistory', JSON.stringify(list.slice(0, 20)));
+    document.getElementById('btn-fav').innerText = isFav(anime.slug) ? "💔 Quitar" : "❤️ Añadir";
+    renderRowFavs();
 }
 
-// BORRAR CACHÉ
 window.borrarCaches = async () => {
     if('caches' in window) {
         const keys = await caches.keys();
         await Promise.all(keys.map(k => caches.delete(k)));
-        alert("Caché borrada.");
         window.location.reload(true);
     }
 };
