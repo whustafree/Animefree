@@ -26,16 +26,17 @@ window.onload = () => {
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
     }
     history.replaceState({ page: 'home' }, ""); 
+    
+    // Inicialización de funciones principales
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
     renderGeneros();
     
-    // Carga inicial del Directorio en la pestaña de búsqueda
+    // Carga automática del directorio gigante en la pestaña de búsqueda
     cargarMasResultados(true); 
 };
 
-// Navegación con botón atrás
 window.onpopstate = (event) => {
     if (document.getElementById('player-modal').style.display === 'flex') {
         cerrarReproductor(false);
@@ -48,7 +49,7 @@ window.onpopstate = (event) => {
 };
 
 async function fetchData(endpoint) {
-    // Normalización para evitar errores con tildes en la URL
+    // Normalización de texto para evitar errores con tildes
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
     for (const wrap of PROXIES) {
@@ -66,7 +67,7 @@ async function fetchData(endpoint) {
     return null;
 }
 
-// CARGA DE ESTRENOS (Home)
+// REPARACIÓN: Función declarada correctamente para evitar ReferenceError
 async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
     if (!grid) return;
@@ -77,7 +78,6 @@ async function cargarEstrenos() {
     }
 }
 
-// GESTIÓN DE BÚSQUEDA Y DIRECTORIO
 function renderGeneros() {
     const container = document.getElementById('genre-list');
     if(!container) return;
@@ -103,6 +103,7 @@ async function buscar() {
     cargarMasResultados(true);
 }
 
+// BÚSQUEDA MEJORADA: Usa el directorio de la API para cargar miles de opciones
 async function cargarMasResultados(limpiar) {
     if (isLoadingMore || !hasMoreResults) return; 
     isLoadingMore = true;
@@ -135,7 +136,6 @@ async function cargarMasResultados(limpiar) {
     isLoadingMore = false;
 }
 
-// TARJETAS
 function crearTarjeta(item, container, ctx) {
     const card = document.createElement('div'); 
     card.className = 'anime-card';
@@ -151,7 +151,6 @@ function crearTarjeta(item, container, ctx) {
     container.appendChild(card);
 }
 
-// DETALLES
 async function cargarDetalles(slug) {
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
@@ -178,7 +177,6 @@ async function cargarDetalles(slug) {
     }
 }
 
-// REPRODUCTOR
 window.prepararVideo = (index) => {
     currentEpisodeIndex = index;
     const ep = currentAnimeData.episodes[index];
@@ -228,7 +226,6 @@ function cerrarReproductor(back = true) {
     if(back) history.back();
 }
 
-// PERSISTENCIA
 function guardarHistorial(anime) {
     let hist = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     hist = hist.filter(h => h.slug !== anime.slug);
@@ -251,7 +248,6 @@ function actualizarBotonFav() {
     document.getElementById('btn-fav').innerText = isFav ? '❤️ En Favoritos' : '🤍 Añadir Favorito';
 }
 
-// NAVEGACIÓN TABS
 function cambiarTab(id) {
     document.querySelectorAll('.tab-content, .nav-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${id}`).classList.add('active');
@@ -274,7 +270,7 @@ function renderHistorial() {
     hist.forEach(h => crearTarjeta(h, grid, 'hist'));
 }
 
-// SCROLL INFINITO
+// SCROLL INFINITO PARA EL DIRECTORIO
 window.onscroll = () => {
     if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
         if(document.getElementById('tab-search').classList.contains('active')) {
