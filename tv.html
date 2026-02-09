@@ -5,6 +5,7 @@
     <title>Whustaf TV</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Estilos específicos para TV */
         .tv-body { background: #111; color: white; overflow: hidden; font-family: sans-serif; }
         .tv-navbar { position: fixed; left: 0; top: 0; width: 250px; height: 100%; background: #000; display: flex; flex-direction: column; padding: 20px; z-index: 100; border-right: 1px solid #333; }
         .tv-logo { font-size: 24px; font-weight: bold; color: var(--primary); margin-bottom: 40px; }
@@ -55,6 +56,13 @@
         .tv-player-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 300; display: none; }
         .tv-close-player { position: absolute; top: 20px; right: 20px; background: rgba(255,0,0,0.5); color: white; border: none; padding: 10px 20px; font-size: 20px; border-radius: 5px; }
         .tv-close-player:focus { background: red; transform: scale(1.2); }
+
+        /* CONSOLA TV */
+        .debug-console { position: fixed; bottom: 0; left: 250px; right: 0; height: 200px; background: rgba(0,0,0,0.95); border-top: 2px solid red; z-index: 9999; color: lime; font-family: monospace; font-size: 12px; display: flex; flex-direction: column; }
+        .console-header { background: #333; padding: 5px 10px; display: flex; justify-content: space-between; }
+        .console-body { flex: 1; overflow-y: auto; padding: 10px; white-space: pre-wrap; }
+        .log-error { color: #ff5555; background: rgba(50,0,0,0.5); display: block; border-bottom: 1px solid #444; }
+        .log-info { color: #ccffcc; display: block; border-bottom: 1px solid #333; }
     </style>
 </head>
 <body class="tv-body">
@@ -66,7 +74,11 @@
             <button onclick="tvTab('search')" class="tv-link focusable" id="tv-search">🔍 Buscar</button>
             <button onclick="tvTab('favorites')" class="tv-link focusable">❤️ Mi Lista</button>
             <button onclick="tvTab('history')" class="tv-link focusable">🕒 Historial</button>
-            <button onclick="borrarCaches()" class="tv-link focusable" style="margin-top: 50px; color: #ff5555;">🧹 Limpiar</button>
+            
+            <hr style="border-color:#333; margin:20px 0;">
+            
+            <button onclick="borrarCaches()" class="tv-link focusable" style="color: #ff5555;">🧹 Limpiar</button>
+            <button onclick="toggleDebugMode()" class="tv-link focusable" style="color: yellow;">💻 Consola</button>
         </div>
     </nav>
 
@@ -135,6 +147,17 @@
         <button onclick="closeTvPlayer()" class="tv-close-player focusable">✕</button>
     </div>
 
-    <script src="app_tv.js?v=tv_fix_final"></script>
+    <div id="debug-console" class="debug-console" style="display: none;">
+        <div class="console-header">
+            <span>💻 LOGS TV</span>
+            <div class="console-actions">
+                <button onclick="limpiarLogs()" class="hero-btn secondary focusable" style="padding:2px 10px; font-size:12px;">Borrar</button>
+                <button onclick="toggleDebugMode()" class="hero-btn secondary focusable" style="padding:2px 10px; font-size:12px;">Cerrar</button>
+            </div>
+        </div>
+        <div id="console-logs" class="console-body"></div>
+    </div>
+
+    <script src="app_tv.js?v=tv_console_fix"></script>
 </body>
 </html>
