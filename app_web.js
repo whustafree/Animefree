@@ -1,19 +1,20 @@
-// --- SISTEMA DE DEPURACIÓN (DEBUGGER) ---
-// Esto debe ir AL PRINCIPIO del archivo para capturar todo
+// ==========================================
+// WHUSTAF WEB - VERSIÓN DEBUG 3.5 (FIX GÉNEROS)
+// ==========================================
+
+// --- SISTEMA DE DEPURACIÓN ---
 let isDebugActive = false;
 let logBuffer = [];
 
-// Interceptamos la consola normal para guardarla en nuestra consola visual
 const originalLog = console.log;
 const originalError = console.error;
 const originalWarn = console.warn;
 
 function logToVisualConsole(msg, type) {
-    // Guardar en memoria siempre (por si se activa después)
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = `[${timestamp}] [${type}] ${msg}`;
     logBuffer.push(logEntry);
-    if (logBuffer.length > 200) logBuffer.shift(); // Guardar solo ultimos 200
+    if (logBuffer.length > 200) logBuffer.shift();
 
     if (!isDebugActive) return;
 
@@ -23,11 +24,10 @@ function logToVisualConsole(msg, type) {
         line.className = `log-line log-${type.toLowerCase()}`;
         line.textContent = logEntry;
         consoleDiv.appendChild(line);
-        consoleDiv.scrollTop = consoleDiv.scrollHeight; // Auto-scroll al final
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 }
 
-// Sobrescribimos las funciones de la consola
 console.log = (...args) => {
     originalLog(...args);
     logToVisualConsole(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '), 'INFO');
@@ -41,13 +41,12 @@ console.error = (...args) => {
     logToVisualConsole(args.join(' '), 'ERROR');
 };
 
-// Capturar errores globales (pantallazos de la muerte)
 window.onerror = function(msg, url, line, col, error) {
     console.error(`ERROR CRÍTICO: ${msg}\nEn: ${url}:${line}:${col}`);
     return false;
 };
 
-// --- FUNCIONES DE LA UI DE DEBUG ---
+// --- FUNCIONES UI DEBUG ---
 window.toggleSettings = () => {
     const modal = document.getElementById('settings-modal');
     modal.style.display = (modal.style.display === 'block') ? 'none' : 'block';
@@ -56,15 +55,11 @@ window.toggleSettings = () => {
 window.toggleDebugMode = () => {
     const consoleDiv = document.getElementById('debug-console');
     const chk = document.getElementById('chk-debug');
-    
     isDebugActive = !isDebugActive;
-    
     if (isDebugActive) {
         consoleDiv.style.display = 'flex';
         if(chk) chk.checked = true;
-        console.log("=== MODO DEPURACIÓN ACTIVADO ===");
-        console.log("Navegador: " + navigator.userAgent);
-        // Volcar logs pasados
+        console.log("=== DEPURACIÓN ACTIVADA ===");
         const body = document.getElementById('console-logs');
         body.innerHTML = '';
         logBuffer.forEach(log => {
@@ -82,28 +77,25 @@ window.toggleDebugMode = () => {
 
 window.copiarLogs = () => {
     const text = logBuffer.join('\n');
-    navigator.clipboard.writeText(text)
-        .then(() => alert("✅ Logs copiados. Ahora pégalos en el chat."))
-        .catch(err => alert("❌ Error al copiar: " + err));
+    navigator.clipboard.writeText(text).then(() => alert("✅ Copiado")).catch(e => alert("Error: " + e));
 };
 
 window.limpiarLogs = () => {
     logBuffer = [];
     document.getElementById('console-logs').innerHTML = '';
-    console.log("--- Logs limpiados ---");
 };
 
 window.borrarCaches = async () => {
     if('caches' in window){
         const keys = await caches.keys();
         await Promise.all(keys.map(k => caches.delete(k)));
-        alert("Caché borrada. La página se recargará.");
+        alert("Caché borrada. Recargando...");
         window.location.reload(true);
     }
 };
 
 // ==========================================
-// CÓDIGO DE LA APLICACIÓN
+// LÓGICA DE LA APLICACIÓN
 // ==========================================
 
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
@@ -132,14 +124,11 @@ const GENRE_MAP = {
 };
 
 window.onload = () => {
-    // Intento de actualización de SW
     if (window.location.protocol !== 'file:' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
-
     history.replaceState({ page: 'home' }, "", ""); 
     
-    console.log("Iniciando aplicación...");
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
@@ -163,52 +152,40 @@ window.onpopstate = (event) => {
 
 async function fetchData(endpoint) {
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    console.log(`[NETWORK] Solicitando: ${cleanEndpoint}`); // LOG DE RED
+    console.log(`[NETWORK] Solicitando: ${cleanEndpoint}`);
 
     for (const wrap of PROXIES) {
         try {
             const url = wrap(API_BASE + cleanEndpoint);
-            // console.log(`[PROXY] Probando: ${url}`); 
             const resp = await fetch(url);
-            if (!resp.ok) {
-                console.warn(`[PROXY FAIL] ${resp.status} en ${url}`);
-                continue;
-            }
+            if (!resp.ok) continue;
             
             const text = await resp.text();
             try {
                 let data = JSON.parse(text);
                 if (data.contents) data = JSON.parse(data.contents);
-                console.log(`[SUCCESS] Datos recibidos de: ${cleanEndpoint}`);
+                // LOG IMPORTANTE: Ver qué devuelve la API (solo los primeros 50 caracteres)
+                console.log(`[DATA CHECK] ${JSON.stringify(data).substring(0, 100)}...`);
                 return data.success ? data.data : data;
-            } catch (e) { 
-                console.error("[JSON ERROR] Respuesta no válida", text.substring(0, 50));
-                continue; 
-            }
-        } catch (e) { 
-            console.error(`[FETCH ERROR] ${e.message}`); 
-        }
+            } catch (e) { continue; }
+        } catch (e) { console.warn("Fallo proxy..."); }
     }
-    console.error("[FATAL] Todos los proxies fallaron para: " + endpoint);
+    console.error("[FATAL] Fallaron todos los proxies");
     return null;
 }
 
-// ... RESTO DE FUNCIONES (cargarEstrenos, renderGeneros, etc.) IGUAL QUE ANTES ...
-// Solo me aseguro de pegar las funciones corregidas aquí para que el archivo esté completo.
-
+// --- ESTRENOS ---
 async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
     if (!grid) return;
-    grid.innerHTML = '<div class="loader"></div>';
     const data = await fetchData('/list/latest-episodes');
     if (data) {
         grid.innerHTML = '';
         data.forEach(item => crearTarjeta(item, grid, 'latest'));
-    } else {
-        grid.innerHTML = '<p>Error cargando estrenos. Revisa la consola.</p>';
     }
 }
 
+// --- GÉNEROS ---
 function renderGeneros() {
     const container = document.getElementById('genre-list');
     if(!container) return;
@@ -220,7 +197,7 @@ window.buscarPorGenero = (genero) => {
     currentGenre = GENRE_MAP[genero] || "";
     currentQuery = ""; 
     document.getElementById('inp').value = genero;
-    console.log(`[BUSQUEDA] Genero seleccionado: ${genero} (${currentGenre})`);
+    console.log(`[BUSQUEDA] Genero: ${genero} (${currentGenre})`);
     searchPage = 1;
     hasMoreResults = true;
     cargarMasResultados(true);
@@ -230,12 +207,12 @@ async function buscar() {
     const q = document.getElementById('inp').value;
     currentQuery = q;
     currentGenre = ""; 
-    console.log(`[BUSQUEDA] Texto: ${q}`);
     searchPage = 1;
     hasMoreResults = true;
     cargarMasResultados(true);
 }
 
+// --- RESULTADOS DE BÚSQUEDA (CORREGIDO) ---
 async function cargarMasResultados(limpiar) {
     if (isLoadingMore || !hasMoreResults) return; 
     isLoadingMore = true;
@@ -244,8 +221,10 @@ async function cargarMasResultados(limpiar) {
     if (limpiar) grid.innerHTML = '<div class="loader"></div>';
 
     let endpoint = "";
+    
+    // CORRECCIÓN AQUÍ: Quitamos '[]' del parametro genre
     if (currentGenre) {
-        endpoint = `/browse?genre[]=${currentGenre}&page=${searchPage}&order=added`;
+        endpoint = `/browse?genre=${currentGenre}&page=${searchPage}&order=added`;
     } else if (currentQuery) {
         endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
     } else {
@@ -256,7 +235,9 @@ async function cargarMasResultados(limpiar) {
     
     if (limpiar) grid.innerHTML = '';
     
+    // Intentamos detectar dónde viene el array
     const results = data?.media || data?.animes || data || [];
+    console.log(`[RESULTADOS] Encontrados: ${results.length}`); // Ver cantidad
     
     if (results.length > 0) {
         results.forEach(item => crearTarjeta(item, grid, 'search'));
@@ -284,8 +265,8 @@ function crearTarjeta(item, container, ctx) {
     container.appendChild(card);
 }
 
+// --- DETALLES Y PLAYER ---
 async function cargarDetalles(slug) {
-    console.log(`[DETALLES] Abriendo: ${slug}`);
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
     if(history.state?.modal !== 'details') history.pushState({ modal: 'details' }, "");
@@ -297,7 +278,7 @@ async function cargarDetalles(slug) {
         
         document.getElementById('det-title').innerText = info.title;
         document.getElementById('det-img').src = info.cover;
-        document.getElementById('det-synopsis').innerText = (info.synopsis || "Sin descripción.").substring(0, 300) + '...';
+        document.getElementById('det-synopsis').innerText = (info.synopsis || "").substring(0, 300) + '...';
         document.getElementById('backdrop-img').style.backgroundImage = `url('${info.cover}')`;
         document.getElementById('det-genres').innerText = (info.genres || []).join(', ');
 
@@ -307,11 +288,8 @@ async function cargarDetalles(slug) {
         ).join('');
 
         document.getElementById('btn-play-latest').onclick = () => prepararVideo(0);
-        
         actualizarBotonFav();
         guardarHistorial(info);
-    } else {
-        console.error("No se pudo cargar la info del anime");
     }
 }
 
@@ -323,10 +301,8 @@ window.prepararVideo = (index) => {
 };
 
 async function playVideo(slug, number) {
-    console.log(`[PLAYER] Cargando episodio ${number} (${slug})`);
     const modal = document.getElementById('player-modal');
     modal.style.display = 'flex';
-    
     if(history.state?.modal !== 'player') history.pushState({ modal: 'player' }, "");
     
     document.getElementById('player-title').innerText = `Episodio ${number}`;
@@ -349,13 +325,11 @@ async function playVideo(slug, number) {
             btnNext.style.display = 'none';
         }
     } else {
-         console.error("No servers found");
-         document.getElementById('video-wrapper').innerHTML = '<p style="color:white;text-align:center;">No hay servidores disponibles.</p>';
+         document.getElementById('video-wrapper').innerHTML = '<p style="color:white;padding:20px;">Sin servidores.</p>';
     }
 }
 
 window.setSource = (url) => {
-    console.log(`[PLAYER] Fuente establecida: ${url}`);
     document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
 };
 
@@ -363,7 +337,6 @@ window.volverALista = () => { history.back(); };
 window.cerrarDetalles = () => { history.back(); };
 window.cerrarReproductor = () => { history.back(); };
 
-// --- Favoritos y UI extras ---
 function guardarHistorial(anime) {
     let hist = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     hist = hist.filter(h => h.slug !== anime.slug);
