@@ -1,19 +1,17 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN FINAL (FIX GENRE)
+// WHUSTAF WEB - VERSIÓN ESTABLE (SOLO TEXTO)
 // ==========================================
 
-// --- SISTEMA DE DEPURACIÓN (MANTENIDO) ---
+// --- DEPURACIÓN ---
 let isDebugActive = false;
 let logBuffer = [];
-const originalLog = console.log;
-const originalError = console.error;
-const originalWarn = console.warn;
+const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
 
 function logToVisualConsole(msg, type) {
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = `[${timestamp}] [${type}] ${msg}`;
     logBuffer.push(logEntry);
-    if (logBuffer.length > 200) logBuffer.shift();
+    if(logBuffer.length > 200) logBuffer.shift();
     if (!isDebugActive) return;
     const consoleDiv = document.getElementById('console-logs');
     if (consoleDiv) {
@@ -25,40 +23,26 @@ function logToVisualConsole(msg, type) {
     }
 }
 console.log = (...args) => { originalLog(...args); logToVisualConsole(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '), 'INFO'); };
-console.warn = (...args) => { originalWarn(...args); logToVisualConsole(args.join(' '), 'WARN'); };
 console.error = (...args) => { originalError(...args); logToVisualConsole(args.join(' '), 'ERROR'); };
-window.onerror = function(msg, url, line, col, error) { console.error(`ERROR CRÍTICO: ${msg}\nEn: ${url}:${line}:${col}`); return false; };
+window.onerror = (msg, url, line) => { console.error(`CRASH: ${msg} (${line})`); return false; };
 
-// --- UI DEBUG ---
-window.toggleSettings = () => { document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block') ? 'none' : 'block'; };
+// --- UI HELPERS ---
+window.toggleSettings = () => document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block' ? 'none' : 'block');
 window.toggleDebugMode = () => {
-    const consoleDiv = document.getElementById('debug-console');
-    const chk = document.getElementById('chk-debug');
     isDebugActive = !isDebugActive;
-    if (isDebugActive) {
-        consoleDiv.style.display = 'flex';
-        if(chk) chk.checked = true;
-        console.log("=== DEPURACIÓN ACTIVADA ===");
-        const body = document.getElementById('console-logs');
-        body.innerHTML = '';
-        logBuffer.forEach(log => {
-            const type = log.includes('[ERROR]') ? 'error' : 'info';
-            const line = document.createElement('div');
-            line.className = `log-line log-${type}`;
-            line.textContent = log;
-            body.appendChild(line);
-        });
-    } else {
-        consoleDiv.style.display = 'none';
-        if(chk) chk.checked = false;
-    }
+    const div = document.getElementById('debug-console');
+    const chk = document.getElementById('chk-debug');
+    div.style.display = isDebugActive ? 'flex' : 'none';
+    if(chk) chk.checked = isDebugActive;
+    if(isDebugActive) console.log("--- MODO DEBUG ACTIVADO ---");
 };
-window.copiarLogs = () => { navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("✅ Logs copiados")).catch(e => alert("Error: " + e)); };
+window.copiarLogs = () => navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("Copiado"));
 window.limpiarLogs = () => { logBuffer = []; document.getElementById('console-logs').innerHTML = ''; };
-window.borrarCaches = async () => { if('caches' in window){ const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); alert("Caché borrada. Recargando..."); window.location.reload(true); } };
+window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
+
 
 // ==========================================
-// --- LÓGICA DE LA APLICACIÓN ---
+// --- LÓGICA PRINCIPAL ---
 // ==========================================
 
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
@@ -73,19 +57,8 @@ let currentAnimeData = null;
 let currentEpisodeIndex = -1;
 let searchPage = 1; 
 let currentQuery = ""; 
-let currentGenre = ""; 
 let hasMoreResults = true; 
 let isLoadingMore = false;
-
-// MAPA DE GÉNEROS (Slugs técnicos)
-const GENRE_MAP = {
-    "Acción": "accion", "Aventura": "aventura", "Comedia": "comedia", "Drama": "drama", 
-    "Ecchi": "ecchi", "Fantasía": "fantasia", "Romance": "romance", "Shounen": "shounen", 
-    "Terror": "terror", "Isekai": "isekai", "Sobrenatural": "sobrenatural", "Escolares": "escolares",
-    "Misterio": "misterio", "Psicológico": "psicologico", "Ciencia Ficción": "ciencia-ficcion",
-    "Seinen": "seinen", "Shoujo": "shoujo", "Recuentos de la vida": "recuentos-de-la-vida",
-    "Deportes": "deportes", "Música": "musica", "Mecha": "mecha", "Artes Marciales": "artes-marciales"
-};
 
 window.onload = () => {
     if (window.location.protocol !== 'file:' && 'serviceWorker' in navigator) {
@@ -93,15 +66,13 @@ window.onload = () => {
     }
     history.replaceState({ page: 'home' }, "", ""); 
     
-    console.log("Iniciando App v4.5...");
+    console.log("Iniciando App Estable...");
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
-    renderGeneros();
-    cargarMasResultados(true); 
 };
 
-window.onpopstate = (event) => {
+window.onpopstate = () => {
     const player = document.getElementById('player-modal');
     const details = document.getElementById('details-modal');
     if (player.style.display === 'flex') {
@@ -116,9 +87,9 @@ window.onpopstate = (event) => {
 };
 
 async function fetchData(endpoint) {
-    // Normalización: Quita tildes para evitar errores de URL
+    // Solo permitimos caracteres básicos en la URL para evitar errores
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    console.log(`[NETWORK] Solicitando: ${cleanEndpoint}`);
+    console.log(`[NET] Fetch: ${cleanEndpoint}`);
 
     for (const wrap of PROXIES) {
         try {
@@ -129,13 +100,9 @@ async function fetchData(endpoint) {
             try {
                 let data = JSON.parse(text);
                 if (data.contents) data = JSON.parse(data.contents);
-                if(data.error) {
-                    console.error(`[API ERROR] ${data.message}`);
-                    return null;
-                }
                 return data.success ? data.data : data;
             } catch (e) { continue; }
-        } catch (e) { console.warn("Proxy error"); }
+        } catch (e) { console.warn("Proxy fail"); }
     }
     console.error("Todos los proxies fallaron");
     return null;
@@ -152,61 +119,47 @@ async function cargarEstrenos() {
     }
 }
 
-// --- GÉNEROS ---
-function renderGeneros() {
-    const container = document.getElementById('genre-list');
-    if(!container) return;
-    const genres = Object.keys(GENRE_MAP);
-    container.innerHTML = genres.map(g => `<button class="genre-chip" onclick="buscarPorGenero('${g}')">${g}</button>`).join('');
-}
-
-window.buscarPorGenero = (genero) => {
-    currentGenre = GENRE_MAP[genero] || "";
-    currentQuery = ""; 
-    document.getElementById('inp').value = genero;
-    console.log(`[BUSQUEDA] Filtro Género: ${genero} -> ${currentGenre}`);
-    searchPage = 1;
-    hasMoreResults = true;
-    cargarMasResultados(true);
-};
-
+// --- BÚSQUEDA (SOLO TEXTO) ---
 async function buscar() {
     const q = document.getElementById('inp').value;
+    if (!q) {
+        alert("Por favor escribe algo para buscar");
+        return;
+    }
     currentQuery = q;
-    currentGenre = ""; 
     searchPage = 1;
     hasMoreResults = true;
+    
+    // Limpiar grid
+    const grid = document.getElementById('grid-search');
+    grid.innerHTML = '<div class="loader"></div>';
+    
     cargarMasResultados(true);
 }
 
-// --- RESULTADOS DE BÚSQUEDA (CORRECCIÓN CRÍTICA) ---
 async function cargarMasResultados(limpiar) {
     if (isLoadingMore || !hasMoreResults) return; 
-    isLoadingMore = true;
     
-    const grid = document.getElementById('grid-search');
-    if (limpiar) grid.innerHTML = '<div class="loader"></div>';
-
-    let endpoint = "";
-    
-    if (currentGenre) {
-        // [FIX] Cambiado 'genres[]' a 'genre[]' (singular)
-        endpoint = `/search?genre[]=${currentGenre}&order=added&page=${searchPage}`;
-    } else if (currentQuery) {
-        endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
-    } else {
-        // Directorio general
-        endpoint = `/search?order=added&page=${searchPage}`;
+    // Si no hay texto de búsqueda, no hacemos nada (Modo limpio)
+    if (!currentQuery) {
+        isLoadingMore = false;
+        return;
     }
+
+    isLoadingMore = true;
+    const grid = document.getElementById('grid-search');
+    
+    // Endpoint simple y directo de búsqueda
+    const endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
 
     const data = await fetchData(endpoint);
     
     if (limpiar) grid.innerHTML = '';
     
     const results = data?.media || data?.animes || data || [];
-    console.log(`[RESULTADOS] Recibidos: ${results.length || 0}`);
+    console.log(`[SEARCH] Resultados: ${results.length}`);
     
-    if (results && results.length > 0) {
+    if (results.length > 0) {
         results.forEach(item => crearTarjeta(item, grid, 'search'));
         searchPage++;
         hasMoreResults = results.length >= 20; 
@@ -351,6 +304,7 @@ function renderHistorial() {
 }
 
 window.borrarHistorial = () => { localStorage.removeItem('animeHistory'); renderHistorial(); };
+
 window.onscroll = () => {
     if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
         if(document.getElementById('tab-search').classList.contains('active')) {
