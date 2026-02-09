@@ -16,10 +16,10 @@ let currentGenre = "";
 let hasMoreResults = true; 
 let isLoadingMore = false;
 
-// Mapa de Géneros EXACTO para la API (basado en AnimeFLV)
+// Mapa de Géneros EXACTO (Corregido para coincidir con la API)
 const GENRE_MAP = {
     "Acción": "accion",
-    "Aventura": "aventura",         // Corregido: antes era "aventuras"
+    "Aventura": "aventura",         // Corregido: Singular
     "Comedia": "comedia",
     "Drama": "drama",
     "Ecchi": "ecchi",
@@ -27,7 +27,7 @@ const GENRE_MAP = {
     "Romance": "romance",
     "Shounen": "shounen",
     "Terror": "terror",
-    "Isekai": "isekai",             // Nota: Si falla, probar sin esto, no es oficial clásico
+    "Isekai": "isekai",
     "Sobrenatural": "sobrenatural",
     "Escolares": "escolares",
     "Misterio": "misterio",
@@ -35,7 +35,7 @@ const GENRE_MAP = {
     "Ciencia Ficción": "ciencia-ficcion",
     "Seinen": "seinen",
     "Shoujo": "shoujo",
-    "Recuentos de la vida": "recuentos-de-la-vida", // Muy importante
+    "Recuentos de la vida": "recuentos-de-la-vida",
     "Deportes": "deportes",
     "Música": "musica",
     "Mecha": "mecha",
@@ -46,19 +46,23 @@ const GENRE_MAP = {
 window.onload = () => {
     // Evitar errores de Service Worker en local
     if (window.location.protocol !== 'file:') {
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+        // Intentamos actualizar el SW si existe
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.update();
+                }
+            });
+        }
     }
     
-    // Estado inicial del historial
     history.replaceState({ page: 'home' }, "", ""); 
 
-    // Cargar contenido inicial
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
-    renderGeneros();
+    renderGeneros(); // <--- Esta función usa el GENRE_MAP de arriba
     
-    // Cargar directorio gigante en segundo plano
     cargarMasResultados(true); 
 };
 
@@ -67,43 +71,36 @@ window.onpopstate = (event) => {
     const player = document.getElementById('player-modal');
     const details = document.getElementById('details-modal');
 
-    // 1. Si el reproductor está abierto, ciérralo y quédate en Detalles
     if (player.style.display === 'flex') {
         player.style.display = 'none';
-        document.getElementById('video-wrapper').innerHTML = ''; // Limpiar iframe
+        document.getElementById('video-wrapper').innerHTML = ''; 
         return;
     }
 
-    // 2. Si los detalles están abiertos, ciérralos y vuelve a la lista
     if (details.style.display === 'block') {
         details.style.display = 'none';
         return;
     }
-
-    // 3. Si no hay modales, asegurar que estamos en la pestaña correcta
-    // (Opcional: Si quieres que 'Atrás' cambie de pestaña)
 };
 
-// --- CONEXIÓN API ROBUSTA ---
+// --- CONEXIÓN API ---
 async function fetchData(endpoint) {
-    // Limpiar tildes de la URL para evitar errores 403 en proxies
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
     for (const wrap of PROXIES) {
         try {
             const resp = await fetch(wrap(API_BASE + cleanEndpoint));
-            if (!resp.ok) continue; // Si falla, prueba el siguiente proxy
+            if (!resp.ok) continue; 
             const text = await resp.text();
             
             try {
                 let data = JSON.parse(text);
-                // AllOrigins a veces devuelve el JSON dentro de 'contents'
                 if (data.contents) data = JSON.parse(data.contents);
                 return data.success ? data.data : data;
-            } catch (e) { continue; } // Si no es JSON válido, prueba otro
-        } catch (e) { console.warn("Proxy falló, intentando siguiente..."); }
+            } catch (e) { continue; } 
+        } catch (e) { console.warn("Proxy falló..."); }
     }
-    return null; // Fallaron todos
+    return null; 
 }
 
 // --- ESTRENOS ---
@@ -114,20 +111,22 @@ async function cargarEstrenos() {
     if (data) {
         grid.innerHTML = '';
         data.forEach(item => crearTarjeta(item, grid, 'latest'));
-    } else {
-        grid.innerHTML = '<p>Error cargando estrenos. Intenta recargar.</p>';
     }
 }
 
-// --- GÉNEROS Y BÚSQUEDA ---
+// --- GÉNEROS Y BÚSQUEDA (AQUÍ ESTÁ LA MAGIA) ---
 function renderGeneros() {
     const container = document.getElementById('genre-list');
     if(!container) return;
+    
+    // AQUÍ SE GENERA LA LISTA DESDE EL MAPA NUEVO
     const genres = Object.keys(GENRE_MAP);
+    
     container.innerHTML = genres.map(g => `<button class="genre-chip" onclick="buscarPorGenero('${g}')">${g}</button>`).join('');
 }
 
 window.buscarPorGenero = (genero) => {
+    // Usamos el valor del mapa (ej: "aventura") no la llave ("Aventura")
     currentGenre = GENRE_MAP[genero] || "";
     currentQuery = ""; 
     document.getElementById('inp').value = genero;
@@ -153,7 +152,6 @@ async function cargarMasResultados(limpiar) {
     if (limpiar) grid.innerHTML = '<div class="loader"></div>';
 
     let endpoint = "";
-    // Construcción de URL segura
     if (currentGenre) {
         endpoint = `/browse?genre[]=${currentGenre}&page=${searchPage}&order=added`;
     } else if (currentQuery) {
@@ -166,16 +164,15 @@ async function cargarMasResultados(limpiar) {
     
     if (limpiar) grid.innerHTML = '';
     
-    // Unificar formato de respuesta (Search vs Browse)
     const results = data?.media || data?.animes || data || [];
     
     if (results.length > 0) {
         results.forEach(item => crearTarjeta(item, grid, 'search'));
         searchPage++;
-        hasMoreResults = results.length >= 20; // Asumimos paginación de 20
+        hasMoreResults = results.length >= 20; 
     } else {
         hasMoreResults = false;
-        if(limpiar) grid.innerHTML = '<p>No se encontraron más resultados.</p>';
+        if(limpiar) grid.innerHTML = '<p>No se encontraron resultados.</p>';
     }
     isLoadingMore = false;
 }
@@ -190,26 +187,22 @@ function crearTarjeta(item, container, ctx) {
     card.onclick = () => {
         let slug = item.animeSlug || item.slug || item.id;
         if (!slug) return;
-        // Limpiar slug de episodios para obtener la serie base
         slug = slug.replace(/-episodio-\d+$/, '').replace(/-\d+$/, '');
         cargarDetalles(slug);
     };
     container.appendChild(card);
 }
 
-// --- DETALLES Y REPRODUCTOR ---
+// --- DETALLES ---
 async function cargarDetalles(slug) {
     const modal = document.getElementById('details-modal');
-    // Mostrar modal antes de cargar para feedback instantáneo
     modal.style.display = 'block';
     
-    // AÑADIR AL HISTORIAL: Esto permite que el botón "Atrás" cierre el modal
     if(history.state?.modal !== 'details') history.pushState({ modal: 'details' }, "");
     
     const info = await fetchData(`/anime/${slug}`);
     if (info) {
         currentAnimeData = info;
-        // Ordenar episodios numéricamente
         if(info.episodes) info.episodes.sort((a, b) => parseFloat(a.number) - parseFloat(b.number));
         
         document.getElementById('det-title').innerText = info.title;
@@ -223,7 +216,6 @@ async function cargarDetalles(slug) {
             `<div class="ep-card" onclick="prepararVideo(${i})">${ep.number}</div>`
         ).join('');
 
-        // Configurar botón "Ver Capítulos" para reproducir el primero
         document.getElementById('btn-play-latest').onclick = () => prepararVideo(0);
         
         actualizarBotonFav();
@@ -231,6 +223,7 @@ async function cargarDetalles(slug) {
     }
 }
 
+// --- REPRODUCTOR ---
 window.prepararVideo = (index) => {
     if (!currentAnimeData || !currentAnimeData.episodes[index]) return;
     currentEpisodeIndex = index;
@@ -242,7 +235,6 @@ async function playVideo(slug, number) {
     const modal = document.getElementById('player-modal');
     modal.style.display = 'flex';
     
-    // AÑADIR AL HISTORIAL: Esto permite que "Volver" cierre solo el video
     if(history.state?.modal !== 'player') history.pushState({ modal: 'player' }, "");
     
     document.getElementById('player-title').innerText = `Episodio ${number}`;
@@ -255,10 +247,8 @@ async function playVideo(slug, number) {
         sList.innerHTML = data.servers.map(srv => 
             `<button onclick="setSource('${srv.embed || srv.url}')">${srv.name}</button>`
         ).join('');
-        // Cargar primer servidor automáticamente
         setSource(data.servers[0].embed || data.servers[0].url);
         
-        // Configurar botón siguiente
         const btnNext = document.getElementById('btn-next-ep');
         if (currentAnimeData.episodes[currentEpisodeIndex + 1]) {
             btnNext.style.display = 'block';
@@ -275,26 +265,12 @@ window.setSource = (url) => {
     document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" allowfullscreen></iframe>`;
 };
 
-// --- NAVEGACIÓN Y CIERRE ---
+// --- CIERRE Y NAVEGACIÓN ---
+window.volverALista = () => { history.back(); };
+window.cerrarDetalles = () => { history.back(); };
+window.cerrarReproductor = () => { history.back(); };
 
-// Función para el botón "⬅ Capítulos"
-window.volverALista = () => {
-    // Simplemente volvemos atrás en el historial.
-    // Esto disparará 'window.onpopstate' que se encargará de cerrar el player visualmente.
-    history.back();
-};
-
-window.cerrarDetalles = () => {
-    // Igual que volverALista, usamos history.back() para mantener sincronía
-    history.back();
-};
-
-window.cerrarReproductor = () => {
-    // Este se llama desde la X, borra todo hacia atrás hasta salir del player
-    history.back();
-};
-
-// --- FAVORITOS E HISTORIAL ---
+// --- PERSISTENCIA ---
 function guardarHistorial(anime) {
     let hist = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     hist = hist.filter(h => h.slug !== anime.slug);
@@ -319,7 +295,6 @@ function actualizarBotonFav() {
     if(btn) btn.innerText = isFav ? '❤️ En Favoritos' : '🤍 Añadir Favorito';
 }
 
-// --- TABS ---
 window.cambiarTab = (id) => {
     document.querySelectorAll('.tab-content, .nav-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${id}`).classList.add('active');
@@ -343,9 +318,8 @@ function renderHistorial() {
 }
 
 window.borrarHistorial = () => { localStorage.removeItem('animeHistory'); renderHistorial(); };
-window.toggleSettings = () => alert("Whustaf Web v2.0\nSistema Reparado.");
+window.toggleSettings = () => alert("Whustaf Web v2.1\nGéneros Corregidos.");
 
-// Scroll Infinito
 window.onscroll = () => {
     if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
         if(document.getElementById('tab-search').classList.contains('active')) {
