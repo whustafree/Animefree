@@ -1,5 +1,47 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN TEMPORADA (BOTÓN LOAD MORE)
+// WHUSTAF WEB - VERSIÓN FINAL LIMPIA
+// ==========================================
+
+// --- DEPURACIÓN ---
+let isDebugActive = false;
+let logBuffer = [];
+const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
+function logToVisualConsole(msg, type) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] [${type}] ${msg}`;
+    logBuffer.push(logEntry);
+    if(logBuffer.length > 200) logBuffer.shift();
+    if (!isDebugActive) return;
+    const consoleDiv = document.getElementById('console-logs');
+    if (consoleDiv) {
+        const line = document.createElement('div');
+        line.className = `log-line log-${type.toLowerCase()}`;
+        line.textContent = logEntry;
+        consoleDiv.appendChild(line);
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+}
+console.log = (...args) => { originalLog(...args); logToVisualConsole(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '), 'INFO'); };
+console.error = (...args) => { originalError(...args); logToVisualConsole(args.join(' '), 'ERROR'); };
+window.onerror = (msg, url, line) => { console.error(`CRASH: ${msg} (${line})`); return false; };
+
+// --- UI HELPERS ---
+window.toggleSettings = () => document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block' ? 'none' : 'block');
+window.toggleDebugMode = () => {
+    isDebugActive = !isDebugActive;
+    const div = document.getElementById('debug-console');
+    const chk = document.getElementById('chk-debug');
+    div.style.display = isDebugActive ? 'flex' : 'none';
+    if(chk) chk.checked = isDebugActive;
+    if(isDebugActive) console.log("--- MODO DEBUG ACTIVADO ---");
+};
+window.copiarLogs = () => navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("Copiado"));
+window.limpiarLogs = () => { logBuffer = []; document.getElementById('console-logs').innerHTML = ''; };
+window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
+
+
+// ==========================================
+// --- LÓGICA PRINCIPAL ---
 // ==========================================
 
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
@@ -10,22 +52,20 @@ const PROXIES = [
     (u) => `https://thingproxy.freeboard.io/fetch/${u}`
 ];
 
-// VARIABLES
 let currentAnimeData = null;
 let currentEpisodeIndex = -1;
 let searchPage = 1; 
 let currentQuery = ""; 
-let currentStatus = ""; 
 let hasMoreResults = true; 
 let isLoadingMore = false;
 
-// INICIO
 window.onload = () => {
     if (window.location.protocol !== 'file:' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
     history.replaceState({ page: 'home' }, "", ""); 
     
+    console.log("Iniciando App Limpia...");
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
@@ -45,10 +85,10 @@ window.onpopstate = () => {
     }
 };
 
-// FETCH CON PROXIES
 async function fetchData(endpoint) {
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
+    console.log(`[NET] Fetch: ${cleanEndpoint}`);
+
     for (const wrap of PROXIES) {
         try {
             const resp = await fetch(wrap(API_BASE + cleanEndpoint));
@@ -62,10 +102,11 @@ async function fetchData(endpoint) {
             } catch (e) { continue; }
         } catch (e) { console.warn("Proxy fail"); }
     }
+    console.error("Todos los proxies fallaron");
     return null;
 }
 
-// ESTRENOS
+// --- ESTRENOS ---
 async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
     if (!grid) return;
@@ -76,126 +117,53 @@ async function cargarEstrenos() {
     }
 }
 
-// --- FUNCIÓN PRINCIPAL: CARGAR TEMPORADA ---
-window.cargarTemporada = () => {
-    document.getElementById('inp').value = "";
-    currentQuery = "";
-    currentStatus = "1"; // Filtro: EN EMISIÓN
-    searchPage = 1;
-    hasMoreResults = true;
-    
-    // Cambiar visualmente a búsqueda
-    cambiarTab('search');
-    
-    // Limpiar grid y mostrar loader
-    const grid = document.getElementById('grid-search');
-    grid.innerHTML = '<div class="loader"></div>';
-    
-    cargarMasResultados(false); // false porque ya limpiamos manualmente
-};
-
-// BÚSQUEDA NORMAL
+// --- BÚSQUEDA (SOLO TEXTO) ---
 async function buscar() {
     const q = document.getElementById('inp').value;
-    if (!q) { alert("Escribe algo..."); return; }
+    if (!q) {
+        alert("Escribe algo para buscar");
+        return;
+    }
     currentQuery = q;
-    currentStatus = "";
     searchPage = 1;
     hasMoreResults = true;
     
+    // Limpiar grid
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader"></div>';
     
-    cargarMasResultados(false);
+    cargarMasResultados(true);
 }
 
-// --- CARGA DE RESULTADOS (LOGICA MEJORADA) ---
-async function cargarMasResultados(fromScroll = false) {
+async function cargarMasResultados(limpiar) {
     if (isLoadingMore || !hasMoreResults) return; 
     
-    // Si no hay nada configurado, salir
-    if (!currentQuery && !currentStatus) return;
+    if (!currentQuery) {
+        isLoadingMore = false;
+        return;
+    }
 
     isLoadingMore = true;
     const grid = document.getElementById('grid-search');
     
-    // Quitar el botón "Cargar Más" viejo si existe
-    const oldBtn = document.getElementById('btn-load-more');
-    if(oldBtn) oldBtn.remove();
-    
-    // Si es scroll infinito, mostrar mini loader abajo
-    if(fromScroll) {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.id = 'scroll-loader';
-        loadingDiv.className = 'loader';
-        loadingDiv.style.width = '30px';
-        loadingDiv.style.height = '30px';
-        grid.parentNode.appendChild(loadingDiv);
-    }
-
-    let endpoint = "";
-    // URL según filtro
-    if (currentStatus === "1") {
-        endpoint = `/search?status=1&order=added&page=${searchPage}`;
-    } else {
-        endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
-    }
+    const endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
 
     const data = await fetchData(endpoint);
     
-    // Quitar loaders
-    if(!fromScroll) grid.innerHTML = ''; 
-    const scrollLoader = document.getElementById('scroll-loader');
-    if(scrollLoader) scrollLoader.remove();
+    if (limpiar) grid.innerHTML = '';
     
     const results = data?.media || data?.animes || data || [];
+    console.log(`[SEARCH] Resultados: ${results.length}`);
     
     if (results.length > 0) {
         results.forEach(item => crearTarjeta(item, grid, 'search'));
         searchPage++;
-        
-        // Si recibimos 20 o más, asumimos que hay página siguiente
-        if (results.length >= 20) {
-            hasMoreResults = true;
-            // AGREGAR BOTÓN "CARGAR MÁS" AL FINAL
-            agregarBotonCargarMas(grid);
-        } else {
-            hasMoreResults = false;
-            // Mensaje de fin
-            const fin = document.createElement('p');
-            fin.style.gridColumn = '1 / -1';
-            fin.style.textAlign = 'center';
-            fin.style.color = '#666';
-            fin.style.padding = '20px';
-            fin.innerText = "Has llegado al final de la lista.";
-            grid.appendChild(fin);
-        }
+        hasMoreResults = results.length >= 20; 
     } else {
         hasMoreResults = false;
-        if(!fromScroll && searchPage === 1) grid.innerHTML = '<p style="text-align:center; margin-top:20px;">No se encontraron resultados.</p>';
+        if(limpiar) grid.innerHTML = '<p>No se encontraron resultados.</p>';
     }
     isLoadingMore = false;
-}
-
-function agregarBotonCargarMas(container) {
-    // Creamos un botón que ocupa todo el ancho abajo
-    const btnContainer = document.createElement('div');
-    btnContainer.id = 'btn-load-more-container';
-    btnContainer.style.gridColumn = '1 / -1'; // Ocupar toda la fila
-    btnContainer.style.textAlign = 'center';
-    btnContainer.style.padding = '20px';
-    
-    const btn = document.createElement('button');
-    btn.id = 'btn-load-more';
-    btn.className = 'load-more-btn';
-    btn.innerText = '⬇ Cargar Más Animes';
-    btn.onclick = () => {
-        btnContainer.remove(); // Se quita al hacer click
-        cargarMasResultados(true);
-    };
-    
-    btnContainer.appendChild(btn);
-    container.appendChild(btnContainer);
 }
 
 function crearTarjeta(item, container, ctx) {
@@ -213,7 +181,7 @@ function crearTarjeta(item, container, ctx) {
     container.appendChild(card);
 }
 
-// DETALLES
+// --- DETALLES Y PLAYER ---
 async function cargarDetalles(slug) {
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
@@ -323,17 +291,11 @@ function renderHistorial() {
     hist.forEach(h => crearTarjeta(h, grid, 'hist'));
 }
 window.borrarHistorial = () => { localStorage.removeItem('animeHistory'); renderHistorial(); };
-window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
-window.toggleSettings = () => document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block' ? 'none' : 'block');
 
-// Scroll infinito (Como respaldo)
 window.onscroll = () => {
     if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
         if(document.getElementById('tab-search').classList.contains('active')) {
-            // Solo cargamos si NO hay botón manual (para no duplicar llamadas)
-            if(!document.getElementById('btn-load-more')) {
-                cargarMasResultados(true);
-            }
+            cargarMasResultados(false);
         }
     }
 };

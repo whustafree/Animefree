@@ -17,9 +17,6 @@
     <div id="tab-home" class="tab-content active">
         <div class="content-body">
             <h2 class="section-title">🔥 Últimos Estrenos</h2>
-            <button class="primary-btn" style="margin-bottom: 20px; background: #333;" onclick="cargarTemporada()">
-                📅 Ver Toda la Temporada (En Emisión)
-            </button>
             <div id="grid-latest" class="grid-container"></div>
         </div>
     </div>
@@ -30,13 +27,10 @@
                 <input type="text" id="inp" placeholder="Buscar anime..." autocomplete="off">
                 <button onclick="buscar()">🔍</button>
             </div>
-            <button class="genre-chip" style="width: 100%; margin-top: 10px; text-align: center;" onclick="cargarTemporada()">
-                📅 Ver Animes en Emisión
-            </button>
-        </div>
-        <div class="content-body" style="padding-top: 110px;">
+            </div>
+        <div class="content-body" style="padding-top: 80px;">
             <div id="grid-search" class="grid-container">
-                <p style="text-align:center; color:#666; margin-top:20px;">Usa el buscador o el botón de temporada.</p>
+                <p style="text-align:center; color:#666; margin-top:20px;">Utiliza el buscador para encontrar animes.</p>
             </div>
         </div>
     </div>
@@ -105,7 +99,9 @@
     </div>
 
     <div id="player-modal" class="player-modal">
-        <div class="video-container"><div id="video-wrapper"></div></div>
+        <div class="video-container">
+            <div id="video-wrapper"></div>
+        </div>
         <div class="player-controls">
             <h3 id="player-title">Reproduciendo...</h3>
             <div id="server-list" class="server-list"></div>
@@ -124,6 +120,6 @@
         <button onclick="cambiarTab('history')" class="nav-btn" id="nav-history">🕒</button>
     </nav>
 
-    <script src="app_web.js?v=season_v1"></script>
+    <script src="app_web.js?v=final_limpio"></script>
 </body>
 </html>
