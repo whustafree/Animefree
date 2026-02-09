@@ -625,3 +625,78 @@ a {
     color: white;
     border-color: white;
 }
+/* --- ESTILOS DE CONFIGURACIÓN Y CONSOLA --- */
+
+.settings-option {
+    background: #333;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.settings-option h3 {
+    margin-top: 0;
+    color: var(--primary);
+}
+
+/* Consola tipo Hacker */
+.debug-console {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40vh; /* Ocupa casi la mitad de la pantalla */
+    background: rgba(0, 0, 0, 0.95);
+    border-top: 3px solid var(--primary);
+    z-index: 9999; /* Por encima de todo */
+    display: flex;
+    flex-direction: column;
+    font-family: 'Courier New', monospace;
+    transition: transform 0.3s ease;
+}
+
+.console-header {
+    background: #222;
+    padding: 8px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #444;
+}
+
+.console-header span {
+    font-weight: bold;
+    color: #fff;
+}
+
+.console-actions button {
+    background: #444;
+    border: 1px solid #666;
+    color: white;
+    padding: 5px 10px;
+    margin-left: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.console-actions button:hover {
+    background: var(--primary);
+}
+
+.console-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    color: #0f0; /* Texto verde matrix */
+    font-size: 0.75rem;
+    white-space: pre-wrap; /* Mantiene saltos de linea */
+    word-break: break-all;
+}
+
+/* Colores para tipos de log */
+.log-line { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; }
+.log-info { color: #88ff88; }
+.log-warn { color: #ffff55; }
+.log-error { color: #ff5555; font-weight: bold; background: rgba(255,0,0,0.1); }
+.log-network { color: #55ffff; }

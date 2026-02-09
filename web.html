@@ -49,6 +49,42 @@
         </div>
     </div>
 
+    <div id="settings-modal" class="full-modal">
+        <div class="modal-content" style="margin-top: 60px; background: #222; min-height: 50vh;">
+            <button class="close-btn" onclick="toggleSettings()">✕</button>
+            <h2 style="margin-bottom: 20px;">⚙️ Configuración</h2>
+            
+            <div class="settings-option">
+                <h3>🛠️ Herramientas</h3>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-debug" onchange="toggleDebugMode()">
+                    <span style="margin-left: 10px;">Activar Consola de Depuración</span>
+                </label>
+                <p style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">Activa esto si tienes errores para ver qué está pasando.</p>
+            </div>
+
+            <div class="settings-option">
+                <h3>🗑️ Datos</h3>
+                <button class="primary-btn" style="background: #444;" onclick="borrarCaches()">Forzar Limpieza de Caché</button>
+            </div>
+            
+            <hr style="border-color: #444; margin: 20px 0;">
+            <p style="text-align: center; color: #666;">Whustaf Web v3.5 (Debug Edition)</p>
+        </div>
+    </div>
+
+    <div id="debug-console" class="debug-console" style="display: none;">
+        <div class="console-header">
+            <span>💻 LOGS DEL SISTEMA</span>
+            <div class="console-actions">
+                <button onclick="copiarLogs()">📋 Copiar Todo</button>
+                <button onclick="limpiarLogs()">🗑️ Limpiar</button>
+                <button onclick="toggleDebugMode()">✕ Cerrar</button>
+            </div>
+        </div>
+        <div id="console-logs" class="console-body"></div>
+    </div>
+
     <div id="details-modal" class="full-modal">
         <div class="backdrop-container"><div id="backdrop-img" class="backdrop-img"></div><div class="backdrop-overlay"></div></div>
         <div class="modal-content">
@@ -68,19 +104,19 @@
     </div>
 
     <div id="player-modal" class="player-modal">
-    <div class="video-container">
-        <div id="video-wrapper"></div>
-    </div>
-    <div class="player-controls">
-        <h3 id="player-title">Reproduciendo...</h3>
-        <div id="server-list" class="server-list"></div>
-        <div class="player-actions">
-            <button class="control-btn" onclick="volverALista()">⬅ Capítulos</button> 
-            <button class="control-btn" id="btn-next-ep" style="display:none;">Siguiente ▶</button>
-            <button class="control-btn close-player" onclick="cerrarReproductor()">✕ Cerrar</button>
+        <div class="video-container">
+            <div id="video-wrapper"></div>
+        </div>
+        <div class="player-controls">
+            <h3 id="player-title">Reproduciendo...</h3>
+            <div id="server-list" class="server-list"></div>
+            <div class="player-actions">
+                <button class="control-btn" onclick="volverALista()">⬅ Capítulos</button> 
+                <button class="control-btn" id="btn-next-ep" style="display:none;">Siguiente ▶</button>
+                <button class="control-btn close-player" onclick="cerrarReproductor()">✕ Cerrar</button>
+            </div>
         </div>
     </div>
-</div>
 
     <nav class="bottom-nav">
         <button onclick="cambiarTab('home')" class="nav-btn active" id="nav-home">🏠</button>
@@ -89,7 +125,6 @@
         <button onclick="cambiarTab('history')" class="nav-btn" id="nav-history">🕒</button>
     </nav>
 
-    <script src="app_web.js"></script>
-   
+    <script src="app_web.js?v=debug_1.0"></script>
 </body>
 </html>
