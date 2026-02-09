@@ -1,12 +1,11 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN ESTABLE CON LIMPIEZA
+// WHUSTAF WEB - VERSIÓN TEMPORADA (APP_WEB.JS)
 // ==========================================
 
 // --- DEPURACIÓN ---
 let isDebugActive = false;
 let logBuffer = [];
 const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
-
 function logToVisualConsole(msg, type) {
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = `[${timestamp}] [${type}] ${msg}`;
@@ -38,19 +37,7 @@ window.toggleDebugMode = () => {
 };
 window.copiarLogs = () => navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("Copiado"));
 window.limpiarLogs = () => { logBuffer = []; document.getElementById('console-logs').innerHTML = ''; };
-
-// --- FUNCIÓN RECUPERADA: BORRAR CACHÉ ---
-window.borrarCaches = async () => {
-    if('caches' in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
-        alert("✅ Caché eliminada correctamente. La página se recargará ahora.");
-        window.location.reload(true);
-    } else {
-        alert("Tu navegador no soporta caché avanzada, pero recargaremos igual.");
-        window.location.reload(true);
-    }
-};
+window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
 
 
 // ==========================================
@@ -69,17 +56,17 @@ let currentAnimeData = null;
 let currentEpisodeIndex = -1;
 let searchPage = 1; 
 let currentQuery = ""; 
+let currentStatus = ""; // NUEVO: Variable para el estado (1 = En emisión)
 let hasMoreResults = true; 
 let isLoadingMore = false;
 
 window.onload = () => {
-    // Intentar actualización automática del SW
     if (window.location.protocol !== 'file:' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
     history.replaceState({ page: 'home' }, "", ""); 
     
-    console.log("Iniciando App Estable...");
+    console.log("Iniciando App con Filtro de Temporada...");
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
@@ -120,7 +107,7 @@ async function fetchData(endpoint) {
     return null;
 }
 
-// --- ESTRENOS ---
+// --- ESTRENOS (HOME) ---
 async function cargarEstrenos() {
     const grid = document.getElementById('grid-latest');
     if (!grid) return;
@@ -131,28 +118,49 @@ async function cargarEstrenos() {
     }
 }
 
-// --- BÚSQUEDA (SOLO TEXTO) ---
-async function buscar() {
-    const q = document.getElementById('inp').value;
-    if (!q) {
-        alert("Por favor escribe algo para buscar");
-        return;
-    }
-    currentQuery = q;
+// --- NUEVA FUNCIÓN: CARGAR TODA LA TEMPORADA ---
+window.cargarTemporada = () => {
+    // Reseteamos todo
+    document.getElementById('inp').value = ""; // Limpiar texto
+    currentQuery = "";
+    currentStatus = "1"; // 1 = EN EMISIÓN (Activos)
     searchPage = 1;
     hasMoreResults = true;
     
-    // Limpiar grid
+    const grid = document.getElementById('grid-search');
+    grid.innerHTML = '<div class="loader"></div>';
+    
+    // Cambiamos visualmente a la pestaña de búsqueda
+    cambiarTab('search');
+    
+    console.log("[TEMPORADA] Cargando animes en emisión...");
+    cargarMasResultados(true);
+};
+
+// --- BÚSQUEDA (TEXTO) ---
+async function buscar() {
+    const q = document.getElementById('inp').value;
+    if (!q) {
+        alert("Escribe algo para buscar");
+        return;
+    }
+    currentQuery = q;
+    currentStatus = ""; // Quitamos el filtro de estado si buscamos por nombre
+    searchPage = 1;
+    hasMoreResults = true;
+    
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader"></div>';
     
     cargarMasResultados(true);
 }
 
+// --- CARGAR RESULTADOS (MODIFICADO PARA STATUS) ---
 async function cargarMasResultados(limpiar) {
     if (isLoadingMore || !hasMoreResults) return; 
     
-    if (!currentQuery) {
+    // Si no hay query y no hay status, no cargamos nada (pantalla limpia)
+    if (!currentQuery && !currentStatus) {
         isLoadingMore = false;
         return;
     }
@@ -160,7 +168,16 @@ async function cargarMasResultados(limpiar) {
     isLoadingMore = true;
     const grid = document.getElementById('grid-search');
     
-    const endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
+    let endpoint = "";
+
+    // LÓGICA DE URL
+    if (currentStatus === "1") {
+        // Buscar animes EN EMISIÓN (Temporada)
+        endpoint = `/search?status=1&order=added&page=${searchPage}`;
+    } else {
+        // Buscar por NOMBRE
+        endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
+    }
 
     const data = await fetchData(endpoint);
     

@@ -17,6 +17,9 @@
     <div id="tab-home" class="tab-content active">
         <div class="content-body">
             <h2 class="section-title">🔥 Últimos Estrenos</h2>
+            <button class="primary-btn" style="margin-bottom: 20px; background: #333;" onclick="cargarTemporada()">
+                📅 Ver Toda la Temporada (En Emisión)
+            </button>
             <div id="grid-latest" class="grid-container"></div>
         </div>
     </div>
@@ -27,10 +30,13 @@
                 <input type="text" id="inp" placeholder="Buscar anime..." autocomplete="off">
                 <button onclick="buscar()">🔍</button>
             </div>
+            <button class="genre-chip" style="width: 100%; margin-top: 10px; text-align: center;" onclick="cargarTemporada()">
+                📅 Ver Animes en Emisión
+            </button>
         </div>
-        <div class="content-body" style="padding-top: 80px;">
+        <div class="content-body" style="padding-top: 110px;">
             <div id="grid-search" class="grid-container">
-                <p style="text-align:center; color:#666; margin-top:20px;">Utiliza el buscador para encontrar animes.</p>
+                <p style="text-align:center; color:#666; margin-top:20px;">Usa el buscador o el botón de temporada.</p>
             </div>
         </div>
     </div>
@@ -54,7 +60,6 @@
         <div class="modal-content" style="margin-top: 60px; background: #222;">
             <button class="close-btn" onclick="toggleSettings()">✕</button>
             <h2>⚙️ Configuración</h2>
-            
             <div class="settings-option">
                 <h3>🛠️ Sistema</h3>
                 <label class="toggle-switch">
@@ -62,10 +67,8 @@
                     <span style="margin-left: 10px;">Consola de Errores</span>
                 </label>
             </div>
-
-            <div class="settings-option" style="border-top: 1px solid #444; padding-top: 15px;">
+            <div class="settings-option">
                 <h3>🗑️ Mantenimiento</h3>
-                <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 10px;">Si la web falla o no carga los cambios, usa este botón:</p>
                 <button class="primary-btn" style="background-color: #d32f2f;" onclick="borrarCaches()">🧹 Limpiar Caché y Recargar</button>
             </div>
         </div>
@@ -121,6 +124,6 @@
         <button onclick="cambiarTab('history')" class="nav-btn" id="nav-history">🕒</button>
     </nav>
 
-    <script src="app_web.js?v=cache_restore"></script>
+    <script src="app_web.js?v=season_v1"></script>
 </body>
 </html>
