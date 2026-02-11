@@ -1,5 +1,5 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN FINAL CORREGIDA
+// WHUSTAF WEB - VERSIÓN FINAL ESTABLE (FIX CRASH & SLUGS)
 // ==========================================
 
 // --- DEPURACIÓN ---
@@ -26,17 +26,19 @@ window.toggleSettings = () => document.getElementById('settings-modal').style.di
 window.toggleDebugMode = () => {
     isDebugActive = !isDebugActive;
     document.getElementById('debug-console').style.display = isDebugActive ? 'flex' : 'none';
-    document.getElementById('chk-debug').checked = isDebugActive;
+    if(document.getElementById('chk-debug')) document.getElementById('chk-debug').checked = isDebugActive;
 };
 window.copiarLogs = () => navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("Copiado"));
 window.limpiarLogs = () => { document.getElementById('console-logs').innerHTML = ''; };
 window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
+
 
 // ==========================================
 // --- LÓGICA PRINCIPAL ---
 // ==========================================
 
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
+
 const PROXIES = [
     (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, 
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -55,6 +57,7 @@ window.onload = () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
     history.replaceState({ page: 'home' }, "", ""); 
+    
     console.log("Iniciando App Web Corregida...");
     cargarEstrenos(); 
     renderHistorial(); 
@@ -77,7 +80,7 @@ async function fetchData(endpoint) {
     
     for (const wrap of PROXIES) {
         try {
-            // FIX: Agregamos timestamp 't=' para evitar que el proxy nos de datos viejos
+            // FIX: Timestamp para evitar caché vieja
             const separator = cleanEndpoint.includes('?') ? '&' : '?';
             const freshUrl = API_BASE + cleanEndpoint + separator + 't=' + Date.now();
             
@@ -148,50 +151,83 @@ function crearTarjeta(item, container, ctx) {
         let slug = item.animeSlug || item.slug || item.id;
         if (!slug) return;
         
-        // --- FIX CRÍTICO AQUÍ ---
-        // SOLO borramos la parte de "-episodio-X". 
-        // NO borramos números finales para respetar temporadas (ej: "shingeki-3")
-        slug = slug.replace(/-episodio-\d+$/, ''); 
+        // 1. Limpieza estándar: quitar "-episodio-X"
+        slug = slug.replace(/-episodio-\d+$/, '');
+        
+        // 2. FIX INTELIGENTE: Si estamos en estrenos y el slug termina en "-NUMERO",
+        // verificar si ese número es el episodio. Si es así, lo borramos.
+        // Esto arregla "arne-no-jikenbo-6" -> "arne-no-jikenbo"
+        // Pero NO toca "solo-leveling-2" si el episodio no es 2.
+        if (ctx === 'latest' && item.number) {
+            const epNum = item.number.toString(); 
+            const re = new RegExp(`-${epNum}$`); // Busca "-6" al final
+            if (re.test(slug)) {
+                slug = slug.replace(re, '');
+            }
+        }
         
         cargarDetalles(slug);
     };
     container.appendChild(card);
 }
 
-// --- DETALLES ---
+// --- DETALLES (CON PROTECCIÓN ANTI-CRASH) ---
 async function cargarDetalles(slug) {
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
     if(history.state?.modal !== 'details') history.pushState({ modal: 'details' }, "");
     
+    // UI de carga
+    document.getElementById('det-title').innerText = "Cargando...";
+    document.getElementById('det-episodes').innerHTML = '<div class="loader"></div>';
+    document.getElementById('det-img').src = ''; 
+    document.getElementById('btn-play-latest').style.display = 'none';
+
     const info = await fetchData(`/anime/${slug}`);
+    
     if (info) {
         currentAnimeData = info;
         
-        // FIX: Orden DESCENDENTE (b - a). El capítulo más nuevo (mayor número) va primero.
-        if(info.episodes) info.episodes.sort((a, b) => parseFloat(b.number) - parseFloat(a.number));
+        // FIX: Protección contra undefined. Si no hay episodios, array vacío.
+        const episodes = info.episodes || [];
         
-        document.getElementById('det-title').innerText = info.title;
-        document.getElementById('det-img').src = info.cover;
-        document.getElementById('det-synopsis').innerText = (info.synopsis || "").substring(0, 300) + '...';
+        // Orden Descendente (Nuevos primero)
+        if (episodes.length > 0) {
+            episodes.sort((a, b) => parseFloat(b.number) - parseFloat(a.number));
+        }
+        
+        document.getElementById('det-title').innerText = info.title || "Sin Título";
+        document.getElementById('det-img').src = info.cover || "";
+        document.getElementById('det-synopsis').innerText = (info.synopsis || "Sin sinopsis disponible.").substring(0, 300) + '...';
         document.getElementById('backdrop-img').style.backgroundImage = `url('${info.cover}')`;
         document.getElementById('det-genres').innerText = (info.genres || []).join(', ');
 
         const grid = document.getElementById('det-episodes'); 
-        grid.innerHTML = info.episodes.map((ep, i) => 
-            `<div class="ep-card" onclick="prepararVideo(${i})">${ep.number}</div>`
-        ).join('');
-
-        // Al estar ordenado descendente, el índice 0 es el ÚLTIMO CAPÍTULO (el nuevo)
-        document.getElementById('btn-play-latest').onclick = () => prepararVideo(0);
         
+        // FIX: Renderizado seguro
+        if (episodes.length > 0) {
+            grid.innerHTML = episodes.map((ep, i) => 
+                `<div class="ep-card" onclick="prepararVideo(${i})">${ep.number}</div>`
+            ).join('');
+
+            // Mostrar botón Play solo si hay episodios
+            const btnPlay = document.getElementById('btn-play-latest');
+            btnPlay.style.display = 'block';
+            btnPlay.onclick = () => prepararVideo(0);
+        } else {
+            grid.innerHTML = '<p style="padding:20px; color:#aaa;">No hay episodios disponibles o el enlace no es correcto.</p>';
+        }
+
         actualizarBotonFav();
         guardarHistorial(info);
+    } else {
+        document.getElementById('det-title').innerText = "Error";
+        document.getElementById('det-episodes').innerHTML = '<p style="padding:20px;">No se pudo cargar la información del anime.</p>';
     }
 }
 
 window.prepararVideo = (index) => {
-    if (!currentAnimeData || !currentAnimeData.episodes[index]) return;
+    if (!currentAnimeData || !currentAnimeData.episodes || !currentAnimeData.episodes[index]) return;
     currentEpisodeIndex = index;
     const ep = currentAnimeData.episodes[index];
     playVideo(ep.slug, ep.number);
@@ -216,20 +252,21 @@ async function playVideo(slug, number) {
         
         const btnNext = document.getElementById('btn-next-ep');
         
-        // FIX: Como la lista está invertida (0 es el nuevo), el "siguiente" (más nuevo) no existe hacia abajo.
-        // Pero si te refieres a "Siguiente en la historia" (ej: ver el 2 después del 1), tenemos que ir al índice ANTERIOR.
-        // Espera, la lógica habitual es: Veo el 9, quiero ver el 10. El 10 está en index 0. El 9 en index 1.
-        // Entonces, index - 1 nos lleva al capítulo más nuevo.
+        // FIX: Lógica invertida (buscar hacia el índice 0 para ir al nuevo)
+        // Nota: Si estás viendo el cap 1 (viejo), el siguiente es el 2 (índice menor)
+        // Pero normalmente "Siguiente" es +1 número. Como están ordenados DESC (10, 9, 8...),
+        // El cap 9 está en index 1, el cap 10 está en index 0.
+        // Si estoy en index 1 (cap 9), quiero ir a index 0 (cap 10).
         if (currentAnimeData.episodes[currentEpisodeIndex - 1]) {
-            btnNext.style.display = 'block';
             const nextEp = currentAnimeData.episodes[currentEpisodeIndex - 1];
+            btnNext.style.display = 'block';
             btnNext.innerText = `Siguiente: Cap ${nextEp.number} ▶`;
             btnNext.onclick = () => prepararVideo(currentEpisodeIndex - 1);
         } else {
             btnNext.style.display = 'none';
         }
     } else {
-         document.getElementById('video-wrapper').innerHTML = '<p style="color:white;padding:20px;">Sin servidores.</p>';
+         document.getElementById('video-wrapper').innerHTML = '<p style="color:white;padding:20px;">Sin servidores disponibles.</p>';
     }
 }
 
@@ -239,12 +276,14 @@ window.cerrarDetalles = () => { history.back(); };
 window.cerrarReproductor = () => { history.back(); };
 
 function guardarHistorial(anime) {
+    if (!anime || !anime.slug) return;
     let hist = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     hist = hist.filter(h => h.slug !== anime.slug);
     hist.unshift({ slug: anime.slug, title: anime.title, cover: anime.cover });
     localStorage.setItem('animeHistory', JSON.stringify(hist.slice(0, 20)));
 }
 function toggleFavorite() {
+    if (!currentAnimeData) return;
     let favs = JSON.parse(localStorage.getItem('favorites') || '[]');
     const isFav = favs.some(f => f.slug === currentAnimeData.slug);
     if(isFav) favs = favs.filter(f => f.slug !== currentAnimeData.slug);

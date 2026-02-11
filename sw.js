@@ -1,6 +1,6 @@
 // sw.js
 // He cambiado el nombre de la versión para obligar a recargar los archivos nuevos
-const CACHE_NAME = 'whustaf-v60-FIX-TEMPORADAS'; 
+const CACHE_NAME = 'whustaf-v60-'; 
 const ASSETS = [
     './',
     './index.html',
