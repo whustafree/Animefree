@@ -6,7 +6,8 @@ import { executeSearch } from "../utils";
 export async function searchAnimesBySpecificURL(url: string): Promise<SearchAnimeResults | null> {
 
     if (!url || (typeof url) !== "string")
-        throw new TypeError(`Parámetro url debe ser una string no vacía, pasaste: ${url}`, { cause: "url is not a valid url." });
+        // CORREGIDO: Quitamos el segundo argumento
+        throw new TypeError(`Parámetro url debe ser una string no vacía, pasaste: ${url}`);
 
     try {
         CloudscraperOptions.uri = url;

@@ -1,6 +1,7 @@
-import { Cheerio, type Element } from "cheerio";
+import { Cheerio } from "cheerio"; // CORREGIDO: Quitamos 'type Element'
 
-export function getNextAndPrevPages(selector: Cheerio<Element>): {
+// CORREGIDO: Cambiamos 'Cheerio<Element>' por 'Cheerio<any>'
+export function getNextAndPrevPages(selector: Cheerio<any>): {
     foundPages: number
     previousPage: string | null
     nextPage: string | null

@@ -6,7 +6,8 @@ import type { AnimeData, AnimeGenre, AnimeStatus, AnimeType } from "../types";
 export async function getAnimeInfo(animeId: string): Promise<AnimeData | null> {
 
     if (!animeId || (typeof animeId !== "string")) {
-        throw new TypeError(`El parámetro animeId debe ser una string no vacía, pasaste: ${animeId}`, { cause: `animeId: ${animeId}` });
+        // CORREGIDO: Quitamos el segundo argumento que daba error
+        throw new TypeError(`El parámetro animeId debe ser una string no vacía, pasaste: ${animeId}`);
     }
 
     try {
