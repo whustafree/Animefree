@@ -1,19 +1,18 @@
 // ==========================================
-// WHUSTAF WEB - RENDER EDITION (FULL STACK)
+// WHUSTAF WEB - VERSIÓN FINAL CORREGIDA
 // ==========================================
 
-// Usamos ruta relativa porque la API está en el mismo dominio
+// Usamos ruta relativa porque la API vive en el mismo servidor
 const API_BASE = "/api"; 
 
-// --- VARIABLES GLOBALES ---
+// Variables globales
 let currentAnimeData = null;
-let currentEpisodeIndex = -1;
 
+// Función genérica para pedir datos
 async function fetchData(endpoint) {
     try {
         const response = await fetch(`${API_BASE}${endpoint}`);
         const json = await response.json();
-        // La API puede devolver 'data' o 'servers' dependiendo de la ruta
         return json.success ? (json.data || json.servers) : null;
     } catch (error) {
         console.error("Error API:", error);
@@ -21,19 +20,19 @@ async function fetchData(endpoint) {
     }
 }
 
-// --- SISTEMA DE PESTAÑAS (TABs) ---
+// --- SISTEMA DE PESTAÑAS ---
 window.cambiarTab = (id) => {
-    // 1. Ocultar todas las pestañas
+    // 1. Ocultar todo
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
     
-    // 2. Mostrar la seleccionada
+    // 2. Mostrar lo seleccionado
     const tab = document.getElementById(`tab-${id}`);
     const btn = document.getElementById(`nav-${id}`);
     if(tab) tab.classList.add('active');
     if(btn) btn.classList.add('active');
 
-    // 3. Cargar datos específicos si es necesario
+    // 3. Cargar datos si es necesario
     if(id === 'favorites') renderFavorites();
     if(id === 'history') renderHistorial();
 };
@@ -52,20 +51,19 @@ async function cargarEstrenos() {
             const card = document.createElement('div');
             card.className = 'anime-card';
             
-            // Limpieza básica del slug para intentar navegar al anime
-            let animeSlug = item.slug;
-            if(item.number) {
-                 animeSlug = animeSlug.replace(`-${item.number}`, '').replace(/-episodio-\d+$/, '');
-            }
+            // [CORRECCIÓN IMPORTANTE]
+            // Limpiamos el slug quitando "-episodio-NUMERO" del final
+            // Ejemplo: "solo-leveling-episodio-5" -> "solo-leveling"
+            let animeSlug = item.slug.replace(/-episodio-\d+$/, '');
 
             card.innerHTML = `
-                <img src="${item.cover}" onerror="this.src='https://via.placeholder.com/150x220?text=No+Image'">
+                <img src="${item.cover}" onerror="this.src='https://via.placeholder.com/150x220?text=No+Imagen'">
                 <div class="info">
                     <span class="title">${item.title}</span>
                     <div class="meta">Episodio ${item.number}</div>
                 </div>
             `;
-            // Al hacer click, vamos a los detalles
+            // Al hacer clic, vamos a los detalles usando el slug limpio
             card.onclick = () => cargarDetalles(animeSlug); 
             grid.appendChild(card);
         });
@@ -74,14 +72,12 @@ async function cargarEstrenos() {
     }
 }
 
-// --- BÚSQUEDA ---
+// --- BUSCADOR ---
 window.buscar = async () => {
     const q = document.getElementById('inp').value;
     if (!q) return;
     
-    // Cambiar a pestaña de búsqueda si no estamos ahí
     window.cambiarTab('search');
-    
     const grid = document.getElementById('grid-search');
     grid.innerHTML = '<div class="loader">Buscando...</div>';
     
@@ -93,9 +89,10 @@ window.buscar = async () => {
             const card = document.createElement('div');
             card.className = 'anime-card';
             card.innerHTML = `
-                <img src="${item.cover}" onerror="this.src='https://via.placeholder.com/150x220?text=No+Image'">
+                <img src="${item.cover}" onerror="this.src='https://via.placeholder.com/150x220?text=No+Imagen'">
                 <div class="info"><span class="title">${item.title}</span></div>
             `;
+            // La búsqueda devuelve 'id' en lugar de 'slug', es lo mismo
             card.onclick = () => cargarDetalles(item.id); 
             grid.appendChild(card);
         });
@@ -109,19 +106,20 @@ window.cargarDetalles = async (id) => {
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
     
-    // UI de carga
+    // Resetear info anterior
     document.getElementById('det-title').innerText = "Cargando...";
     document.getElementById('det-img').src = "";
-    document.getElementById('det-episodes').innerHTML = '<div class="loader">...</div>';
+    document.getElementById('det-synopsis').innerText = "";
+    document.getElementById('det-episodes').innerHTML = '<div class="loader">Cargando episodios...</div>';
 
     const info = await fetchData(`/anime/${id}`);
     
     if (info) {
-        currentAnimeData = info; // Guardamos para favoritos/historial
+        currentAnimeData = info; // Guardar para favoritos
         
         document.getElementById('det-title').innerText = info.title;
         document.getElementById('det-img').src = info.cover; 
-        document.getElementById('det-synopsis').innerText = info.synopsis || "Sin sinopsis.";
+        document.getElementById('det-synopsis').innerText = info.synopsis || "Sin sinopsis disponible.";
         document.getElementById('det-genres').innerText = (info.genres || []).join(', ');
         
         const backdrop = document.getElementById('backdrop-img');
@@ -130,10 +128,12 @@ window.cargarDetalles = async (id) => {
         // Renderizar episodios
         const grid = document.getElementById('det-episodes');
         if(info.episodes && info.episodes.length > 0) {
-            // Ordenar episodios (mayor a menor) si vienen desordenados
+            // Ordenar: Capitulo más alto primero
             info.episodes.sort((a, b) => b.number - a.number);
 
             grid.innerHTML = info.episodes.map(ep => {
+                // Extraemos el slug del capitulo desde su url
+                // Url ej: https://.../ver/anime-1
                 const capSlug = ep.url.split('/').pop(); 
                 return `<div class="ep-card" onclick="playVideo('${capSlug}', ${ep.number})">${ep.number}</div>`;
             }).join('');
@@ -144,12 +144,12 @@ window.cargarDetalles = async (id) => {
         actualizarBotonFav();
         guardarHistorial(info);
     } else {
-         document.getElementById('det-title').innerText = "Error al cargar";
-         document.getElementById('det-episodes').innerHTML = "<p>Error de conexión</p>";
+         document.getElementById('det-title').innerText = "Error";
+         document.getElementById('det-episodes').innerHTML = "<p>No se pudo cargar la información.</p>";
     }
 };
 
-// --- REPRODUCTOR ---
+// --- REPRODUCTOR DE VIDEO ---
 window.playVideo = async (capSlug, number) => {
     const modal = document.getElementById('player-modal');
     modal.style.display = 'flex';
@@ -157,6 +157,7 @@ window.playVideo = async (capSlug, number) => {
     document.getElementById('video-wrapper').innerHTML = '<div class="loader">Buscando servidores...</div>';
     document.getElementById('server-list').innerHTML = '';
     
+    // Pedimos los servidores a nuestra API
     const servers = await fetchData(`/episode/${capSlug}`);
     
     if (servers && servers.length > 0) {
@@ -176,17 +177,18 @@ window.setSource = (url) => {
     document.getElementById('video-wrapper').innerHTML = `<iframe src="${url}" allowfullscreen frameborder="0"></iframe>`; 
 };
 
-// --- FAVORITOS Y HISTORIAL ---
+// --- FAVORITOS ---
 window.toggleFavorite = () => {
     if (!currentAnimeData) return;
     let favs = JSON.parse(localStorage.getItem('favorites') || '[]');
-    const isFav = favs.some(f => f.url === currentAnimeData.url); // Usamos URL o ID como clave
+    // Usamos la URL como identificador único
+    const isFav = favs.some(f => f.url === currentAnimeData.url);
     
     if(isFav) {
         favs = favs.filter(f => f.url !== currentAnimeData.url);
     } else {
         favs.push({ 
-            id: currentAnimeData.url.split('/').pop(), // Extraer ID
+            id: currentAnimeData.url.split('/').pop(),
             title: currentAnimeData.title, 
             cover: currentAnimeData.cover,
             url: currentAnimeData.url
@@ -220,19 +222,19 @@ function renderFavorites() {
     });
 }
 
+// --- HISTORIAL ---
 function guardarHistorial(anime) {
     if(!anime) return;
     let hist = JSON.parse(localStorage.getItem('animeHistory') || '[]');
-    // Evitar duplicados recientes
+    // Quitamos si ya existe para ponerlo al principio (más reciente)
     hist = hist.filter(h => h.url !== anime.url);
-    // Agregar al principio
     hist.unshift({ 
         id: anime.url.split('/').pop(),
         title: anime.title, 
         cover: anime.cover,
         url: anime.url 
     });
-    // Limitar a 20
+    // Guardamos solo los últimos 20
     localStorage.setItem('animeHistory', JSON.stringify(hist.slice(0, 20)));
 }
 
@@ -263,16 +265,13 @@ window.cerrarReproductor = () => {
     document.getElementById('video-wrapper').innerHTML = '';
 };
 
-// --- INICIALIZACIÓN ---
+// --- INICIO ---
 window.onload = () => {
-    console.log("App iniciada. API:", API_BASE);
+    console.log("App iniciada. Conectada a:", API_BASE);
     cargarEstrenos();
-    // Registrar Service Worker si existe
+    
+    // Service Worker (Opcional)
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for(let registration of registrations) {
-                registration.update();
-            }
-        });
+        navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
 };
