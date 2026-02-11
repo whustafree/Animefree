@@ -1,5 +1,5 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN FINAL LIMPIA
+// WHUSTAF WEB - VERSIÓN FINAL CORREGIDA (FIX TEMPORADAS + ORDEN)
 // ==========================================
 
 // --- DEPURACIÓN ---
@@ -65,7 +65,7 @@ window.onload = () => {
     }
     history.replaceState({ page: 'home' }, "", ""); 
     
-    console.log("Iniciando App Limpia...");
+    console.log("Iniciando App Corregida...");
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
@@ -91,7 +91,11 @@ async function fetchData(endpoint) {
 
     for (const wrap of PROXIES) {
         try {
-            const resp = await fetch(wrap(API_BASE + cleanEndpoint));
+            // FIX: Agregar timestamp para evitar caché vieja del proxy
+            const separator = cleanEndpoint.includes('?') ? '&' : '?';
+            const freshUrl = API_BASE + cleanEndpoint + separator + 't=' + Date.now();
+            
+            const resp = await fetch(wrap(freshUrl));
             if (!resp.ok) continue;
             
             const text = await resp.text();
@@ -175,7 +179,10 @@ function crearTarjeta(item, container, ctx) {
     card.onclick = () => {
         let slug = item.animeSlug || item.slug || item.id;
         if (!slug) return;
-        slug = slug.replace(/-episodio-\d+$/, '').replace(/-\d+$/, '');
+        
+        // FIX: Solo borrar "-episodio-X", NO borrar números de temporada (ej: "shingeki-final-3")
+        slug = slug.replace(/-episodio-\d+$/, ''); 
+        
         cargarDetalles(slug);
     };
     container.appendChild(card);
@@ -190,7 +197,9 @@ async function cargarDetalles(slug) {
     const info = await fetchData(`/anime/${slug}`);
     if (info) {
         currentAnimeData = info;
-        if(info.episodes) info.episodes.sort((a, b) => parseFloat(a.number) - parseFloat(b.number));
+        
+        // FIX: Orden Descendente (Nuevos primero: 10, 9, 8...)
+        if(info.episodes) info.episodes.sort((a, b) => parseFloat(b.number) - parseFloat(a.number));
         
         document.getElementById('det-title').innerText = info.title;
         document.getElementById('det-img').src = info.cover;
@@ -203,7 +212,9 @@ async function cargarDetalles(slug) {
             `<div class="ep-card" onclick="prepararVideo(${i})">${ep.number}</div>`
         ).join('');
 
+        // Al estar ordenado descendente, el índice 0 es el capítulo más nuevo
         document.getElementById('btn-play-latest').onclick = () => prepararVideo(0);
+        
         actualizarBotonFav();
         guardarHistorial(info);
     }
@@ -234,9 +245,13 @@ async function playVideo(slug, number) {
         setSource(data.servers[0].embed || data.servers[0].url);
         
         const btnNext = document.getElementById('btn-next-ep');
-        if (currentAnimeData.episodes[currentEpisodeIndex + 1]) {
+        
+        // FIX: Lógica invertida porque la lista ahora está invertida (0 es el más nuevo)
+        // Para ir al siguiente episodio (ej: del 5 al 6), tenemos que ir al índice anterior (hacia el 0)
+        if (currentAnimeData.episodes[currentEpisodeIndex - 1]) {
             btnNext.style.display = 'block';
-            btnNext.onclick = () => prepararVideo(currentEpisodeIndex + 1);
+            btnNext.innerText = `Siguiente: Cap ${currentAnimeData.episodes[currentEpisodeIndex - 1].number} ▶`;
+            btnNext.onclick = () => prepararVideo(currentEpisodeIndex - 1);
         } else {
             btnNext.style.display = 'none';
         }
@@ -254,7 +269,7 @@ function guardarHistorial(anime) {
     let hist = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     hist = hist.filter(h => h.slug !== anime.slug);
     hist.unshift({ slug: anime.slug, title: anime.title, cover: anime.cover });
-    localStorage.setItem('animeHistory', JSON.stringify(hist.slice(0, 20)));
+    localStorage.setItem('animeHistory', JSON.stringify(hist.slice(20))); // Limitado a 20 items
 }
 function toggleFavorite() {
     let favs = JSON.parse(localStorage.getItem('favorites') || '[]');

@@ -1,5 +1,6 @@
 // sw.js
-const CACHE_NAME = 'whustaf-v50-FORCE-UPDATE'; // <--- CAMBIA ESTO SIEMPRE QUE EDITES ALGO
+// FIX: Cambiamos versión para forzar actualización inmediata
+const CACHE_NAME = 'whustaf-v55-FIX-SEASONS-SORT'; 
 const ASSETS = [
     './',
     './index.html',
@@ -29,7 +30,6 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
     // Estrategia: Network First (Intenta internet, si falla usa caché)
-    // Esto es mejor para una app de streaming que necesita datos frescos
     if (e.request.method !== 'GET') return;
     
     e.respondWith(
