@@ -1,23 +1,22 @@
 import express from 'express';
 import cors from 'cors';
-import { getLatest, getAnimeInfo, searchAnime } from './index'; // Importa las funciones de mixdevcode
+import { getLatest, getAnimeInfo, searchAnime } from './index';
 
 const app = express();
-app.use(cors()); // Permite que cualquiera (tu web) se conecte
+app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// RUTA 1: Estrenos (Lo que usará tu Home)
 app.get('/api/latest', async (req, res) => {
     try {
         const data = await getLatest();
-        // Transformamos los datos para que tu web los entienda fácil
+        // OJO: data es de tipo ChapterData[], por eso usamos item.chapter
         const adaptado = data.map((item: any) => ({
             title: item.title,
-            number: item.episode,
-            slug: item.id,
-            cover: item.image,
-            type: item.type
+            number: item.chapter, // CORREGIDO: la librería usa 'chapter'
+            slug: item.url.split('/').pop(), // Extraemos el slug de la URL
+            cover: item.cover,
+            url: item.url
         }));
         res.json({ success: true, data: adaptado });
     } catch (err: any) {
@@ -25,7 +24,6 @@ app.get('/api/latest', async (req, res) => {
     }
 });
 
-// RUTA 2: Detalles del Anime
 app.get('/api/anime/:id', async (req, res) => {
     try {
         const data = await getAnimeInfo(req.params.id);
@@ -35,7 +33,6 @@ app.get('/api/anime/:id', async (req, res) => {
     }
 });
 
-// RUTA 3: Búsqueda
 app.get('/api/search', async (req, res) => {
     try {
         const query = req.query.q as string;
