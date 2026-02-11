@@ -11,31 +11,33 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body class="dark-mode">
 
     <header class="header">
         <div class="container">
             <div class="row align-items-center">
-                <div class="col-lg-2 col-md-2">
+                <div class="col-lg-2 col-md-2 col-6">
                     <div class="header__logo">
                         <a href="#" onclick="cambiarTab('home')">
-                            <h2 style="color:white; font-weight:900;">Anifree<span style="color:#e53637;">W</span></h2>
+                            <h2 style="color:white; font-weight:900; margin:0;">Anifree<span style="color:#e53637;">W</span></h2>
                         </a>
                     </div>
                 </div>
-                <div class="col-lg-8 col-md-8">
+                <div class="col-lg-8 col-md-8 col-2">
                     <div class="header__nav">
                         <nav class="header__menu mobile-menu">
                             <ul>
                                 <li class="active" id="nav-home"><a href="#" onclick="cambiarTab('home')">Inicio</a></li>
                                 <li id="nav-favorites"><a href="#" onclick="cambiarTab('favorites')">Favoritos</a></li>
                                 <li id="nav-history"><a href="#" onclick="cambiarTab('history')">Historial</a></li>
+                                <li id="nav-install" style="display:none;"><a href="#" id="btn-install" style="color: #e53637;"><i class="fa fa-download"></i> Instalar</a></li>
                             </ul>
                         </nav>
                     </div>
                 </div>
-                <div class="col-lg-2 col-md-2">
+                <div class="col-lg-2 col-md-2 col-4 text-right">
                     <div class="header__right">
                         <a href="#" class="search-switch" onclick="cambiarTab('search')"><span class="fa fa-search"></span></a>
                     </div>
@@ -43,27 +45,18 @@
             </div>
         </div>
     </header>
+
     <main class="app-content container mt-4">
-        
         <div id="tab-home" class="tab-content active">
             <div class="trending__product">
-                <div class="row">
-                    <div class="col-lg-8 col-md-8 col-sm-8">
-                        <div class="section-title">
-                            <h4>Últimos Estrenos</h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="row" id="grid-latest">
-                    </div>
+                <div class="section-title"><h4>Últimos Estrenos</h4></div>
+                <div class="row" id="grid-latest"></div>
             </div>
         </div>
 
         <div id="tab-search" class="tab-content">
             <div class="section-title"><h4>Buscar Anime</h4></div>
-            <div class="search-bar-custom mb-4">
-                <input type="text" id="inp" placeholder="¿Qué quieres ver hoy?" class="form-control bg-dark text-white" onkeypress="if(event.key === 'Enter') buscar()">
-            </div>
+            <input type="text" id="inp" placeholder="¿Qué quieres ver hoy?" class="form-control bg-dark text-white mb-4" onkeypress="if(event.key === 'Enter') buscar()">
             <div class="row" id="grid-search"></div>
         </div>
 
@@ -76,7 +69,6 @@
             <div class="section-title"><h4>Historial</h4></div>
             <div class="row" id="grid-history"></div>
         </div>
-
     </main>
 
     <div id="details-modal" class="anime-details-overlay">
@@ -84,37 +76,24 @@
             <div class="anime__details__content bg-dark p-4 rounded">
                 <div class="row">
                     <div class="col-lg-3">
-                        <div class="anime__details__pic set-bg" id="det-img-container">
-                            <img id="det-img" src="" class="img-fluid rounded">
-                        </div>
+                        <div class="anime__details__pic"><img id="det-img" src="" class="img-fluid rounded"></div>
                     </div>
                     <div class="col-lg-9">
                         <div class="anime__details__text">
-                            <div class="anime__details__title">
-                                <h3 id="det-title">Título del Anime</h3>
-                            </div>
-                            <p id="det-synopsis">Sinopsis del anime...</p>
-                            <div class="anime__details__widget">
-                                <div class="row">
-                                    <div class="col-lg-6 col-md-6">
-                                        <ul>
-                                            <li><span>Géneros:</span> <b id="det-genres"></b></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="anime__details__btn">
-                                <button onclick="toggleFavorite()" class="follow-btn" id="btn-fav"><i class="fa fa-heart"></i> Favorito</button>
+                            <h3 id="det-title" class="text-white">Título</h3>
+                            <p id="det-synopsis" class="text-muted my-3">Sinopsis...</p>
+                            <p class="text-white"><b>Géneros:</b> <span id="det-genres" style="color:#e53637;"></span></p>
+                            <div class="mt-4">
+                                <button onclick="toggleFavorite()" class="follow-btn" id="btn-fav">❤️ Favorito</button>
                                 <button onclick="cerrarDetalles()" class="follow-btn bg-secondary">Cerrar</button>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="row mt-4">
-                    <div class="col-lg-12">
-                        <div class="section-title"><h5>Episodios</h5></div>
-                        <div class="anime__details__episodes" id="det-episodes">
-                            </div>
+                    <div class="col-12">
+                        <h5 class="text-white border-bottom pb-2 mb-3">Episodios</h5>
+                        <div id="det-episodes"></div>
                     </div>
                 </div>
             </div>
@@ -131,5 +110,10 @@
     </div>
 
     <script src="app_web.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+    </script>
 </body>
 </html>
