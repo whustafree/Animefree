@@ -1,351 +1,187 @@
-/* ================= CONFIGURACIÓN BASE TIPO APP ================= */
+/* ==========================================
+   ANIFREEW - ESTILOS PREMIUM
+   ========================================== */
+
 :root {
-    /* Paleta de colores moderna */
-    --bg-main: #121212; /* Negro fondo puro */
-    --bg-secondary: #1E1E1E; /* Gris oscuro para tarjetas/barras */
-    --bg-tertiary: #2C2C2C; /* Gris más claro para inputs */
-    --accent: #FF3366; /* Color de acento (un rosa/rojo vibrante) */
-    --text-primary: #FFFFFF;
-    --text-secondary: #A0A0A0;
-    
-    /* Dimensiones y espaciado */
-    --bottom-nav-height: 65px;
-    --header-height: 60px;
-    --border-radius-lg: 16px;
-    --border-radius-md: 12px;
-    --border-radius-sm: 8px;
-    
-    /* Sombras suaves */
-    --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+    --primary-color: #070720;
+    --secondary-color: #0b0c2a;
+    --accent-color: #e53637;
+    --text-color: #ffffff;
+    --text-muted: #b7b7b7;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    font-family: "Mulish", sans-serif;
     margin: 0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg-main);
-    color: var(--text-primary);
-    overflow: hidden; /* Evita el scroll doble en el body */
-    height: 100vh; /* Altura fija para simular app */
-    display: flex;
-    flex-direction: column;
+    overflow-x: hidden;
 }
 
-/* ================= HEADER SUPERIOR ================= */
-.app-header {
-    height: var(--header-height);
-    background: var(--bg-main); /* Transparente al hacer scroll */
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 10;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    backdrop-filter: blur(10px);
-    background-color: rgba(18, 18, 18, 0.8);
-}
-.logo {
-    font-weight: 800;
-    font-size: 1.5rem;
-    background: linear-gradient(45deg, var(--accent), #FF8C00);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -0.5px;
-}
-
-/* ================= CONTENIDO PRINCIPAL (SCROLL AREA) ================= */
-.app-content {
-    flex: 1;
-    overflow-y: auto; /* El scroll ocurre aquí dentro */
-    padding: var(--header-height) 16px var(--bottom-nav-height) 16px;
-    /* Desplazamiento suave tipo iOS */
-    -webkit-overflow-scrolling: touch; 
-}
-
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-
-/* Animación suave al cambiar de pestaña */
-.tab-fade { animation: fadeIn 0.3s ease-in-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-.section-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    margin: 24px 0 16px 0;
-    display: flex;
-    align-items: center;
-}
-
-/* ================= GRID ADAPTATIVO (RESPONSIVE) ================= */
-.grid {
-    display: grid;
-    /* Automáticamente ajusta columnas según el ancho de la pantalla */
-    /* Móvil pequeño: 2 columnas. Móvil grande: 3. Tablet: 4+. */
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 16px;
-}
-
-/* TARJETAS DE ANIME */
-.anime-card {
-    position: relative;
-    border-radius: var(--border-radius-md);
-    overflow: hidden;
-    aspect-ratio: 2 / 3; /* Relación de aspecto de póster */
-    background: var(--bg-secondary);
-    box-shadow: var(--shadow-sm);
-    transition: transform 0.2s, box-shadow 0.2s;
-    cursor: pointer;
-}
-.anime-card:active { transform: scale(0.97); } /* Efecto al tocar */
-
-.anime-card img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Degradado para que el texto se lea sobre la imagen */
-.anime-card::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; width: 100%; height: 60%;
-    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-}
-
-.anime-card .info {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding: 12px;
-    z-index: 2;
-}
-
-.anime-card .title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    line-height: 1.3;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-.anime-card .meta {
-    font-size: 0.75rem;
-    color: var(--accent);
-    font-weight: 700;
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* ================= NAVEGACIÓN INFERIOR (BOTTOM BAR) ================= */
-.bottom-nav {
-    position: fixed;
-    bottom: 0; left: 0; width: 100%;
-    height: var(--bottom-nav-height);
-    background: var(--bg-secondary);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    border-top: 1px solid rgba(255,255,255,0.05);
-    z-index: 100;
-    padding-bottom: env(safe-area-inset-bottom); /* Para iPhone X+ */
-}
-
-.nav-item {
-    background: none; border: none;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    font-size: 0.7rem;
-    padding: 8px 12px;
-    transition: color 0.2s;
-}
-
-.nav-icon { font-size: 1.4rem; margin-bottom: 4px; transition: transform 0.2s;}
-.nav-item.active { color: var(--accent); }
-.nav-item.active .nav-icon { transform: scale(1.1); }
-
-
-/* ================= BUSCADOR ESTILO APP ================= */
-.search-container-sticky {
+/* --- HEADER --- */
+.header {
+    background: var(--primary-color);
+    padding: 15px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
     position: sticky;
     top: 0;
-    background: var(--bg-main);
-    padding: 10px 0;
-    z-index: 5;
-    margin-top: -10px; /* Ajuste fino */
-}
-.search-bar {
-    background: var(--bg-tertiary);
-    border-radius: var(--border-radius-lg);
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    height: 48px;
-}
-.search-icon { color: var(--text-secondary); margin-right: 10px; }
-.search-bar input {
-    background: none; border: none; color: var(--text-primary);
-    font-size: 1rem; flex: 1; outline: none;
-}
-.placeholder-text { text-align: center; color: var(--text-secondary); margin-top: 50px; }
-
-/* ================= MODAL TIPO "BOTTOM SHEET" (ESTILO IOS) ================= */
-.modal-overlay {
-    display: none;
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6); /* Fondo oscuro semi-transparente */
-    z-index: 200;
-    align-items: flex-end; /* Alinea la hoja al fondo */
-    backdrop-filter: blur(5px);
-    animation: fadeOverlay 0.3s forwards;
+    z-index: 99;
 }
 
-.modal-sheet {
-    background: var(--bg-main);
-    width: 100%;
-    max-height: 92vh; /* Casi toda la pantalla */
-    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
-    overflow-y: auto;
-    position: relative;
-    animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; /* Animación de rebote */
-    -webkit-overflow-scrolling: touch;
+.header__menu ul li {
+    display: inline-block;
+    margin-right: 30px;
+    list-style: none;
 }
 
-/* Animaciones del modal */
-@keyframes fadeOverlay { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-/* Barrita decorativa para "arrastrar" */
-.modal-handle {
-    width: 40px; height: 5px; background: var(--bg-tertiary);
-    border-radius: 10px; margin: 12px auto;
-}
-.close-btn-floating {
-    position: absolute; top: 16px; right: 16px;
-    background: rgba(0,0,0,0.5); border: none; color: white;
-    width: 36px; height: 36px; border-radius: 50%;
-    font-size: 1.2rem; z-index: 20; cursor: pointer;
-}
-
-/* Cabecera del detalle con backdrop */
-.backdrop-header {
-    height: 280px; position: relative;
-    background-size: cover; background-position: center;
-}
-.backdrop-gradient {
-    position: absolute; inset: 0;
-    background: linear-gradient(to bottom, transparent, var(--bg-main));
-}
-
-.sheet-content { padding: 20px; position: relative; margin-top: -80px; /* Superpone al backdrop */ z-index: 10; }
-
-.anime-header-info { display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px; }
-.det-poster {
-    width: 130px; height: 190px; object-fit: cover;
-    border-radius: var(--border-radius-md);
-    box-shadow: var(--shadow-md);
-    border: 2px solid var(--bg-secondary);
-}
-.det-text h1 { font-size: 1.5rem; line-height: 1.2; margin: 0 0 10px 0; }
-.genres { color: var(--accent); font-size: 0.9rem; font-weight: 600; }
-
-.btn-fav-large {
-    width: 100%; padding: 14px;
-    background: var(--bg-secondary); color: var(--text-primary);
-    border: none; border-radius: var(--border-radius-md);
-    font-size: 1rem; font-weight: 600; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    transition: background 0.2s;
-}
-.btn-fav-large:active { background: var(--bg-tertiary); }
-
-.section { margin-top: 24px; }
-.section h3 { font-size: 1.1rem; margin-bottom: 12px; }
-.synopsis { line-height: 1.6; color: var(--text-secondary); }
-
-/* Grilla de episodios */
-.episodes-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 10px;
-}
-.ep-card {
-    background: var(--bg-secondary);
-    padding: 12px 5px;
-    text-align: center;
-    border-radius: var(--border-radius-sm);
+.header__menu ul li a {
+    color: var(--text-muted);
+    font-size: 15px;
     font-weight: 700;
-    transition: background 0.2s, color 0.2s;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: 0.3s;
 }
-.ep-card:hover { background: var(--accent); color: white; }
-.ep-card:active { transform: scale(0.95); }
 
+.header__menu ul li.active a,
+.header__menu ul li a:hover {
+    color: #fff;
+}
 
-/* ================= REPRODUCTOR A PANTALLA COMPLETA ================= */
-.player-mode { align-items: center; justify-content: center; backdrop-filter: none; background: black; }
-.player-container { width: 100%; max-width: 900px; background: black; }
-.player-top-bar {
-    padding: 15px; display: flex; align-items: center; gap: 20px; background: #000; color: white;
+/* --- PRODUCTOS (TARJETAS) --- */
+.section-title {
+    border-left: 5px solid var(--accent-color);
+    padding-left: 15px;
+    margin-bottom: 30px;
+    color: white;
+    text-transform: uppercase;
 }
-.back-btn { background: none; border: none; color: white; font-size: 1rem; cursor: pointer; }
-.video-frame-container {
-    position: relative; width: 100%; padding-bottom: 56.25%; /* 16:9 */ background: #111;
-}
-.video-frame-container iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
-.servers-section { padding: 20px; background: #111; }
-.server-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; }
-.server-list button {
-    background: var(--bg-tertiary); border: none; color: white;
-    padding: 10px 20px; border-radius: 30px; font-weight: 600; white-space: nowrap;
-}
-.server-list button:hover { background: var(--accent); }
 
-/* ================= UTILIDADES ================= */
-.header-with-action { display: flex; justify-content: space-between; align-items: center; }
-.btn-text-danger { background: none; border: none; color: #ff4757; font-weight: 600; }
-.loader-spinner {
-    border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent);
-    border-radius: 50%; width: 40px; height: 40px;
-    animation: spin 1s linear infinite; margin: 50px auto; grid-column: 1 / -1;
+.product__item {
+    margin-bottom: 30px;
+    cursor: pointer;
 }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* ================= ADAPTACIÓN PARA TABLET/PC (RESPONSIVE) ================= */
-@media (min-width: 768px) {
-    /* En pantallas grandes, la navegación vuelve arriba (opcional, pero recomendado) */
-    .app-header { padding: 0 40px; }
-    .app-content { padding: 80px 40px 40px 40px; max-width: 1200px; margin: 0 auto; }
-    .bottom-nav { 
-        top: 0; bottom: auto; height: 70px; 
-        background: rgba(18,18,18,0.8); backdrop-filter: blur(10px);
-        justify-content: flex-end; padding: 0 40px; gap: 20px;
-        border-top: none; border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    .nav-item { flex-direction: row; gap: 8px; font-size: 0.9rem; }
-    .nav-icon { margin-bottom: 0; font-size: 1.1rem; }
-    .app-header .logo { position: relative; z-index: 101; } /* Logo sobre la nav */
-    
-    /* El modal ya no es una "hoja inferior", sino un modal centrado clásico */
-    .modal-overlay { align-items: center; justify-content: center; padding: 40px; }
-    .modal-sheet { 
-        max-width: 900px; max-height: 85vh; border-radius: var(--border-radius-lg); 
-        animation: zoomIn 0.3s ease-out forwards;
-    }
-    @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    .modal-handle { display: none; }
-    .backdrop-header { height: 350px; }
-    .det-poster { width: 180px; height: 260px; }
-    .sheet-content { margin-top: -120px; padding: 40px; }
-    .anime-header-info { align-items: flex-end; gap: 30px; }
-    .det-text h1 { font-size: 2.5rem; }
-    .btn-fav-large { width: auto; padding: 12px 30px; }
-    .episodes-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+.product__item__pic {
+    height: 320px;
+    position: relative;
+    border-radius: 5px;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transition: 0.3s;
+}
+
+.product__item:hover .product__item__pic {
+    transform: scale(1.03);
+}
+
+.product__item__pic .ep {
+    background: var(--accent-color);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 4px;
+    position: absolute;
+    left: 10px;
+    top: 10px;
+}
+
+.product__item__text {
+    padding-top: 15px;
+}
+
+.product__item__text h5 a {
+    color: #ffffff;
+    font-weight: 700;
+    line-height: 20px;
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* --- CONTENEDORES --- */
+.tab-content { display: none; min-height: 80vh; }
+.tab-content.active { display: block; animation: fadeIn 0.5s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* --- MODALES --- */
+.anime-details-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 1000;
+    overflow-y: auto;
+}
+
+.anime__details__content {
+    background: var(--secondary-color);
+    margin-top: 50px;
+    margin-bottom: 50px;
+}
+
+.ep-btn {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    margin: 0 8px 8px 0;
+    font-weight: 700;
+    transition: 0.3s;
+}
+
+.ep-btn:hover {
+    background: var(--accent-color);
+}
+
+.follow-btn {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-weight: 700;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+/* --- REPRODUCTOR --- */
+.player-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000;
+    z-index: 2000;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.video-container {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 */
+    height: 0;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 768px) {
+    .product__item__pic { height: 240px; }
+    .header__logo h2 { font-size: 1.5rem; }
+    .header__menu ul li { margin-right: 15px; }
+    .header__menu ul li a { font-size: 12px; }
+    .col-6 { padding-left: 5px; padding-right: 5px; }
 }
 /* ================= LOGO ANIFREEW ================= */
 .logo {
