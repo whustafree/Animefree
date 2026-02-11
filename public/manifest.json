@@ -1,0 +1,11 @@
+{
+  "name": "AnimeFree",
+  "short_name": "AnimeFree",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f13",
+  "theme_color": "#0f0f13",
+  "icons": [
+    { "src": "https://cdn-icons-png.flaticon.com/512/2274/2274357.png", "sizes": "192x192", "type": "image/png" }
+  ]
+}

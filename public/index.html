@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AnimeFree - Whustaf</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f0f13">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">AnimeFree</div>
+        <div class="nav-links">
+            <button onclick="cambiarTab('home')" class="nav-btn active" id="nav-home">Inicio</button>
+            <button onclick="cambiarTab('search')" class="nav-btn" id="nav-search">Buscar</button>
+            <button onclick="cambiarTab('favorites')" class="nav-btn" id="nav-favorites">Favoritos</button>
+            <button onclick="cambiarTab('history')" class="nav-btn" id="nav-history">Historial</button>
+        </div>
+    </nav>
+
+    <div id="tab-home" class="tab-content active">
+        <h2>Últimos Estrenos</h2>
+        <div class="grid" id="grid-latest">
+            <div class="loader">Cargando estrenos...</div>
+        </div>
+    </div>
+
+    <div id="tab-search" class="tab-content">
+        <div class="search-bar">
+            <input type="text" id="inp" placeholder="Buscar anime..." onkeypress="if(event.key === 'Enter') buscar()">
+            <button onclick="buscar()">🔍</button>
+        </div>
+        <div class="grid" id="grid-search"></div>
+    </div>
+
+    <div id="tab-favorites" class="tab-content">
+        <h2>Mis Favoritos</h2>
+        <div class="grid" id="grid-favorites"></div>
+    </div>
+
+    <div id="tab-history" class="tab-content">
+        <h2>Historial de Visualización <button onclick="borrarHistorial()" style="float:right;font-size:12px;background:red;">Borrar</button></h2>
+        <div class="grid" id="grid-history"></div>
+    </div>
+
+    <div id="details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="cerrarDetalles()">&times;</span>
+            <div class="backdrop" id="backdrop-img"></div>
+            <div class="det-header">
+                <img id="det-img" src="" alt="Cover">
+                <div class="det-info">
+                    <h1 id="det-title">Título</h1>
+                    <p id="det-genres" class="genres">Generos</p>
+                    <button id="btn-fav" onclick="toggleFavorite()">🤍 Añadir Favorito</button>
+                </div>
+            </div>
+            <p id="det-synopsis" class="synopsis">Sinopsis...</p>
+            <h3>Episodios</h3>
+            <div class="episodes-grid" id="det-episodes"></div>
+        </div>
+    </div>
+
+    <div id="player-modal" class="modal player-modal">
+        <div class="player-content">
+            <div class="player-header">
+                <h3 id="player-title">Reproduciendo</h3>
+                <span class="close-btn" onclick="cerrarReproductor()">Cerrar ❌</span>
+            </div>
+            <div id="video-wrapper" class="video-container"></div>
+            <div class="server-list" id="server-list"></div>
+        </div>
+    </div>
+
+    <script src="app_web.js"></script>
+    <script>
+        // Registrar Service Worker si lo deseas
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+:root { --bg: #0f0f13; --card: #1f1f23; --accent: #ff4757; --text: #fff; }
+body { margin: 0; font-family: sans-serif; background: var(--bg); color: var(--text); padding-bottom: 70px; }
+
+/* NAVBAR */
+.navbar { position: sticky; top: 0; background: rgba(15,15,19,0.95); padding: 10px; z-index: 100; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(5px); }
+.logo { font-weight: bold; font-size: 1.2rem; color: var(--accent); }
+.nav-links { display: flex; gap: 10px; }
+.nav-btn { background: none; border: none; color: #aaa; padding: 5px 10px; font-size: 0.9rem; cursor: pointer; }
+.nav-btn.active { color: var(--text); border-bottom: 2px solid var(--accent); }
+
+/* CONTENIDO */
+.tab-content { display: none; padding: 10px; animation: fadeIn 0.3s; }
+.tab-content.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* GRID */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: 10px; }
+.anime-card { background: var(--card); border-radius: 8px; overflow: hidden; cursor: pointer; position: relative; transition: transform 0.2s; }
+.anime-card:hover { transform: scale(1.03); }
+.anime-card img { width: 100%; height: 160px; object-fit: cover; }
+.anime-card .info { padding: 8px; }
+.anime-card .title { font-size: 0.85rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.anime-card .meta { font-size: 0.7rem; color: #888; margin-top: 4px; }
+
+/* BUSCADOR */
+.search-bar { display: flex; gap: 5px; margin-bottom: 15px; }
+.search-bar input { flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #333; background: var(--card); color: white; }
+.search-bar button { padding: 0 15px; background: var(--accent); border: none; border-radius: 5px; color: white; cursor: pointer; }
+
+/* MODAL */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; overflow-y: auto; }
+.modal-content { background: var(--bg); margin: 0; min-height: 100vh; padding: 15px; position: relative; }
+.close-btn { position: absolute; top: 10px; right: 15px; font-size: 30px; cursor: pointer; z-index: 10; text-shadow: 0 0 5px black; }
+
+.backdrop { height: 200px; background-size: cover; background-position: center; opacity: 0.3; mask-image: linear-gradient(to bottom, black, transparent); position: absolute; top: 0; left: 0; width: 100%; z-index: 0; }
+.det-header { display: flex; gap: 15px; position: relative; z-index: 1; margin-top: 80px; }
+#det-img { width: 100px; height: 150px; border-radius: 5px; object-fit: cover; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.det-info h1 { font-size: 1.2rem; margin: 0; }
+.genres { font-size: 0.8rem; color: #aaa; margin: 5px 0; }
+.synopsis { font-size: 0.9rem; color: #ccc; line-height: 1.4; margin: 15px 0; max-height: 100px; overflow-y: auto; }
+
+#btn-fav { background: #333; border: none; color: white; padding: 8px; border-radius: 5px; width: 100%; margin-top: 10px; cursor: pointer; }
+
+/* EPISODIOS */
+.episodes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 8px; margin-bottom: 50px; }
+.ep-card { background: var(--card); padding: 10px; text-align: center; border-radius: 5px; cursor: pointer; font-size: 0.9rem; }
+.ep-card:hover { background: var(--accent); }
+
+/* REPRODUCTOR */
+.player-modal { display: none; align-items: center; justify-content: center; }
+.player-content { width: 100%; max-width: 800px; background: black; }
+.player-header { padding: 10px; display: flex; justify-content: space-between; background: #222; }
+.video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; background: black; }
+.video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+.server-list { display: flex; gap: 10px; padding: 10px; overflow-x: auto; background: #111; }
+.server-list button { background: #333; border: none; color: white; padding: 8px 15px; border-radius: 4px; white-space: nowrap; cursor: pointer; }
+.server-list button:hover { background: var(--accent); }
+
+.loader { text-align: center; padding: 20px; color: #666; width: 100%; }
