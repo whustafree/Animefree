@@ -1,6 +1,6 @@
 // sw.js
-// FIX: Cambiamos versión para forzar actualización inmediata
-const CACHE_NAME = 'whustaf-v55-FIX-SEASONS-SORT'; 
+// He cambiado el nombre de la versión para obligar a recargar los archivos nuevos
+const CACHE_NAME = 'whustaf-v60-FIX-TEMPORADAS'; 
 const ASSETS = [
     './',
     './index.html',
@@ -16,30 +16,28 @@ self.addEventListener('install', e => {
     e.waitUntil(
         caches.open(CACHE_NAME)
         .then(c => c.addAll(ASSETS))
-        .then(() => self.skipWaiting()) // Obliga a instalarse de inmediato
+        .then(() => self.skipWaiting()) // Instalar inmediatamente
     );
 });
 
 self.addEventListener('activate', e => {
     e.waitUntil(
         caches.keys().then(k => Promise.all(
-            k.map(key => key !== CACHE_NAME && caches.delete(key)) // Borra el caché viejo
-        )).then(() => self.clients.claim()) // Toma control inmediato
+            k.map(key => key !== CACHE_NAME && caches.delete(key)) // Borrar cachés viejos
+        )).then(() => self.clients.claim()) // Tomar control inmediatamente
     );
 });
 
 self.addEventListener('fetch', e => {
-    // Estrategia: Network First (Intenta internet, si falla usa caché)
     if (e.request.method !== 'GET') return;
     
     e.respondWith(
         fetch(e.request)
         .then(res => {
-            // Si es un archivo estático (JS/CSS/HTML), actualiza la copia en caché
             const copy = res.clone();
             caches.open(CACHE_NAME).then(c => c.put(e.request, copy));
             return res;
         })
-        .catch(() => caches.match(e.request)) // Si no hay internet, usa caché
+        .catch(() => caches.match(e.request))
     );
 });

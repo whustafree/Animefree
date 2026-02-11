@@ -1,51 +1,42 @@
 // ==========================================
-// WHUSTAF WEB - VERSIÓN FINAL CORREGIDA (FIX TEMPORADAS + ORDEN)
+// WHUSTAF WEB - VERSIÓN FINAL CORREGIDA
 // ==========================================
 
 // --- DEPURACIÓN ---
 let isDebugActive = false;
 let logBuffer = [];
-const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
+const originalLog = console.log, originalError = console.error;
+
 function logToVisualConsole(msg, type) {
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = `[${timestamp}] [${type}] ${msg}`;
-    logBuffer.push(logEntry);
-    if(logBuffer.length > 200) logBuffer.shift();
     if (!isDebugActive) return;
     const consoleDiv = document.getElementById('console-logs');
     if (consoleDiv) {
         const line = document.createElement('div');
         line.className = `log-line log-${type.toLowerCase()}`;
-        line.textContent = logEntry;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
         consoleDiv.appendChild(line);
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 }
-console.log = (...args) => { originalLog(...args); logToVisualConsole(args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' '), 'INFO'); };
+console.log = (...args) => { originalLog(...args); logToVisualConsole(args.join(' '), 'INFO'); };
 console.error = (...args) => { originalError(...args); logToVisualConsole(args.join(' '), 'ERROR'); };
-window.onerror = (msg, url, line) => { console.error(`CRASH: ${msg} (${line})`); return false; };
 
 // --- UI HELPERS ---
 window.toggleSettings = () => document.getElementById('settings-modal').style.display = (document.getElementById('settings-modal').style.display === 'block' ? 'none' : 'block');
 window.toggleDebugMode = () => {
     isDebugActive = !isDebugActive;
-    const div = document.getElementById('debug-console');
-    const chk = document.getElementById('chk-debug');
-    div.style.display = isDebugActive ? 'flex' : 'none';
-    if(chk) chk.checked = isDebugActive;
-    if(isDebugActive) console.log("--- MODO DEBUG ACTIVADO ---");
+    document.getElementById('debug-console').style.display = isDebugActive ? 'flex' : 'none';
+    document.getElementById('chk-debug').checked = isDebugActive;
 };
 window.copiarLogs = () => navigator.clipboard.writeText(logBuffer.join('\n')).then(() => alert("Copiado"));
-window.limpiarLogs = () => { logBuffer = []; document.getElementById('console-logs').innerHTML = ''; };
+window.limpiarLogs = () => { document.getElementById('console-logs').innerHTML = ''; };
 window.borrarCaches = async () => { if('caches' in window) { (await caches.keys()).forEach(k => caches.delete(k)); window.location.reload(true); }};
-
 
 // ==========================================
 // --- LÓGICA PRINCIPAL ---
 // ==========================================
 
 const API_BASE = "https://animeflv.ahmedrangel.com/api";
-
 const PROXIES = [
     (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, 
     (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -64,34 +55,29 @@ window.onload = () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
     }
     history.replaceState({ page: 'home' }, "", ""); 
-    
-    console.log("Iniciando App Corregida...");
+    console.log("Iniciando App Web Corregida...");
     cargarEstrenos(); 
     renderHistorial(); 
     renderFavorites();
 };
 
 window.onpopstate = () => {
-    const player = document.getElementById('player-modal');
-    const details = document.getElementById('details-modal');
-    if (player.style.display === 'flex') {
-        player.style.display = 'none';
-        document.getElementById('video-wrapper').innerHTML = ''; 
+    if (document.getElementById('player-modal').style.display === 'flex') {
+        cerrarReproductor();
         return;
     }
-    if (details.style.display === 'block') {
-        details.style.display = 'none';
+    if (document.getElementById('details-modal').style.display === 'block') {
+        cerrarDetalles();
         return;
     }
 };
 
 async function fetchData(endpoint) {
     const cleanEndpoint = endpoint.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    console.log(`[NET] Fetch: ${cleanEndpoint}`);
-
+    
     for (const wrap of PROXIES) {
         try {
-            // FIX: Agregar timestamp para evitar caché vieja del proxy
+            // FIX: Agregamos timestamp 't=' para evitar que el proxy nos de datos viejos
             const separator = cleanEndpoint.includes('?') ? '&' : '?';
             const freshUrl = API_BASE + cleanEndpoint + separator + 't=' + Date.now();
             
@@ -106,7 +92,6 @@ async function fetchData(endpoint) {
             } catch (e) { continue; }
         } catch (e) { console.warn("Proxy fail"); }
     }
-    console.error("Todos los proxies fallaron");
     return null;
 }
 
@@ -121,43 +106,26 @@ async function cargarEstrenos() {
     }
 }
 
-// --- BÚSQUEDA (SOLO TEXTO) ---
+// --- BÚSQUEDA ---
 async function buscar() {
     const q = document.getElementById('inp').value;
-    if (!q) {
-        alert("Escribe algo para buscar");
-        return;
-    }
+    if (!q) { alert("Escribe algo"); return; }
     currentQuery = q;
     searchPage = 1;
     hasMoreResults = true;
-    
-    // Limpiar grid
-    const grid = document.getElementById('grid-search');
-    grid.innerHTML = '<div class="loader"></div>';
-    
+    document.getElementById('grid-search').innerHTML = '<div class="loader"></div>';
     cargarMasResultados(true);
 }
 
 async function cargarMasResultados(limpiar) {
     if (isLoadingMore || !hasMoreResults) return; 
-    
-    if (!currentQuery) {
-        isLoadingMore = false;
-        return;
-    }
-
     isLoadingMore = true;
     const grid = document.getElementById('grid-search');
     
-    const endpoint = `/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`;
-
-    const data = await fetchData(endpoint);
-    
+    const data = await fetchData(`/search?query=${encodeURIComponent(currentQuery)}&page=${searchPage}`);
     if (limpiar) grid.innerHTML = '';
     
     const results = data?.media || data?.animes || data || [];
-    console.log(`[SEARCH] Resultados: ${results.length}`);
     
     if (results.length > 0) {
         results.forEach(item => crearTarjeta(item, grid, 'search'));
@@ -180,7 +148,9 @@ function crearTarjeta(item, container, ctx) {
         let slug = item.animeSlug || item.slug || item.id;
         if (!slug) return;
         
-        // FIX: Solo borrar "-episodio-X", NO borrar números de temporada (ej: "shingeki-final-3")
+        // --- FIX CRÍTICO AQUÍ ---
+        // SOLO borramos la parte de "-episodio-X". 
+        // NO borramos números finales para respetar temporadas (ej: "shingeki-3")
         slug = slug.replace(/-episodio-\d+$/, ''); 
         
         cargarDetalles(slug);
@@ -188,7 +158,7 @@ function crearTarjeta(item, container, ctx) {
     container.appendChild(card);
 }
 
-// --- DETALLES Y PLAYER ---
+// --- DETALLES ---
 async function cargarDetalles(slug) {
     const modal = document.getElementById('details-modal');
     modal.style.display = 'block';
@@ -198,7 +168,7 @@ async function cargarDetalles(slug) {
     if (info) {
         currentAnimeData = info;
         
-        // FIX: Orden Descendente (Nuevos primero: 10, 9, 8...)
+        // FIX: Orden DESCENDENTE (b - a). El capítulo más nuevo (mayor número) va primero.
         if(info.episodes) info.episodes.sort((a, b) => parseFloat(b.number) - parseFloat(a.number));
         
         document.getElementById('det-title').innerText = info.title;
@@ -212,7 +182,7 @@ async function cargarDetalles(slug) {
             `<div class="ep-card" onclick="prepararVideo(${i})">${ep.number}</div>`
         ).join('');
 
-        // Al estar ordenado descendente, el índice 0 es el capítulo más nuevo
+        // Al estar ordenado descendente, el índice 0 es el ÚLTIMO CAPÍTULO (el nuevo)
         document.getElementById('btn-play-latest').onclick = () => prepararVideo(0);
         
         actualizarBotonFav();
@@ -246,11 +216,14 @@ async function playVideo(slug, number) {
         
         const btnNext = document.getElementById('btn-next-ep');
         
-        // FIX: Lógica invertida porque la lista ahora está invertida (0 es el más nuevo)
-        // Para ir al siguiente episodio (ej: del 5 al 6), tenemos que ir al índice anterior (hacia el 0)
+        // FIX: Como la lista está invertida (0 es el nuevo), el "siguiente" (más nuevo) no existe hacia abajo.
+        // Pero si te refieres a "Siguiente en la historia" (ej: ver el 2 después del 1), tenemos que ir al índice ANTERIOR.
+        // Espera, la lógica habitual es: Veo el 9, quiero ver el 10. El 10 está en index 0. El 9 en index 1.
+        // Entonces, index - 1 nos lleva al capítulo más nuevo.
         if (currentAnimeData.episodes[currentEpisodeIndex - 1]) {
             btnNext.style.display = 'block';
-            btnNext.innerText = `Siguiente: Cap ${currentAnimeData.episodes[currentEpisodeIndex - 1].number} ▶`;
+            const nextEp = currentAnimeData.episodes[currentEpisodeIndex - 1];
+            btnNext.innerText = `Siguiente: Cap ${nextEp.number} ▶`;
             btnNext.onclick = () => prepararVideo(currentEpisodeIndex - 1);
         } else {
             btnNext.style.display = 'none';
@@ -269,7 +242,7 @@ function guardarHistorial(anime) {
     let hist = JSON.parse(localStorage.getItem('animeHistory') || '[]');
     hist = hist.filter(h => h.slug !== anime.slug);
     hist.unshift({ slug: anime.slug, title: anime.title, cover: anime.cover });
-    localStorage.setItem('animeHistory', JSON.stringify(hist.slice(20))); // Limitado a 20 items
+    localStorage.setItem('animeHistory', JSON.stringify(hist.slice(0, 20)));
 }
 function toggleFavorite() {
     let favs = JSON.parse(localStorage.getItem('favorites') || '[]');
