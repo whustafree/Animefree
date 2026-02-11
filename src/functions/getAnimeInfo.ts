@@ -15,26 +15,28 @@ export async function getAnimeInfo(animeId: string): Promise<AnimeData | null> {
         const animeData = (await cloudscraper(CloudscraperOptions)) as string;
         const $ = load(animeData);
 
+        // Selectores mejorados y a prueba de fallos
         const animeInfo: AnimeData = {
-            title: $('h1.Title').text() || $('body > div.Wrapper > div > div > div.Ficha.fchlt > div.Container > h1').text(),
+            title: $('h1.Title').text() || $('div.Container h1').text() || "Sin Título",
             alternative_titles: [],
-            status: ($('span.fa-tv').next().text() || "Finalizado") as AnimeStatus,
+            // Estado: Busca el icono del reloj (fa-clock-o) y toma el texto siguiente
+            status: ($('span.fa-clock-o').next().text() || $('span.fa-tv').next().text() || "Finalizado") as AnimeStatus,
             rating: $('#votes_prmd').text() || "0",
+            // Tipo: Busca el span con clase Type
             type: ($('span.Type').text() || "Anime") as AnimeType,
             cover: 'https://animeflv.net' + ($('div.AnimeCover img').attr('src') || ""),
-            synopsis: $('div.Description p').text(),
+            synopsis: $('div.Description p').text() || "Sin sinopsis.",
             genres: $('nav.Nvgnrs a').map((i, el) => $(el).text()).get() as AnimeGenre[],
             episodes: [],
             url: CloudscraperOptions.uri
         };
 
-        // --- CORRECCIÓN CLAVE: Búsqueda dinámica de episodios ---
+        // --- Extracción de episodios (Detecta var episodes = ...) ---
         const scripts = $('script');
         let episodesScript = "";
         
         scripts.each((i, el) => {
             const content = $(el).html();
-            // Buscamos el script que contiene la variable "episodes ="
             if (content && content.includes('var episodes =')) {
                 episodesScript = content;
             }
@@ -44,10 +46,9 @@ export async function getAnimeInfo(animeId: string): Promise<AnimeData | null> {
             const match = episodesScript.match(/episodes = (\[\[.*?\]\]);/);
             if (match && match[1]) {
                 const episodesList = JSON.parse(match[1]);
-                // AnimeFLV guarda los episodios al revés (del ultimo al primero)
-                // episodesList.length nos da la cantidad total
+                // AnimeFLV guarda: [NumeroEpisodio, ID_Video]
                 for (let i = 0; i < episodesList.length; i++) {
-                    const epNum = episodesList[i][0]; // El número del episodio
+                    const epNum = episodesList[i][0]; 
                     animeInfo.episodes.push({
                         number: epNum,
                         url: 'https://www3.animeflv.net/ver/' + animeId + '-' + epNum
@@ -55,7 +56,6 @@ export async function getAnimeInfo(animeId: string): Promise<AnimeData | null> {
                 }
             }
         }
-        // --------------------------------------------------------
         
         $('span.TxtAlt').each((i, el) => {
             animeInfo.alternative_titles.push($(el).text());
