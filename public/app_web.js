@@ -1,3 +1,6 @@
+
+
+
 // ==========================================
 // ANIFREEW - LÓGICA PRO + INSTALACIÓN PWA
 // ==========================================
@@ -16,6 +19,35 @@ window.addEventListener('beforeinstallprompt', (e) => {
     const installContainer = document.getElementById('nav-install');
     if (installContainer) installContainer.style.display = 'inline-block';
 });
+
+// 1. Detectar si es iOS (iPhone/iPad)
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Si no es iPhone y no está instalada, mostramos el botón
+    if (!isStandalone) {
+        document.getElementById('nav-install').style.display = 'inline-block';
+    }
+});
+
+// 2. Si es iPhone y no está instalada, mostramos el botón con instrucciones
+if (isIOS && !isStandalone) {
+    const installBtn = document.getElementById('btn-install');
+    const installLink = document.getElementById('nav-install');
+    
+    if (installLink) {
+        installLink.style.display = 'inline-block';
+        installBtn.innerHTML = '<i class="fa fa-apple"></i> ¿Cómo instalar?';
+        
+        installBtn.onclick = (e) => {
+            e.preventDefault();
+            alert('Para instalar AnifreeW en tu iPhone:\n1. Pulsa el botón "Compartir" (el cuadrado con flecha abajo).\n2. Selecciona "Añadir a la pantalla de inicio".');
+        };
+    }
+}
 
 // Manejo del click en el botón "Instalar"
 document.getElementById('btn-install')?.addEventListener('click', async (e) => {
