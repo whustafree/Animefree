@@ -347,3 +347,35 @@ body {
     .btn-fav-large { width: auto; padding: 12px 30px; }
     .episodes-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
 }
+/* ================= LOGO ANIFREEW ================= */
+.logo {
+    font-weight: 900; /* Extra gordita */
+    font-size: 1.8rem;
+    letter-spacing: -1px; /* Letras pegaditas estilo moderno */
+    color: var(--text-primary);
+    position: relative;
+    text-transform: uppercase;
+    font-family: 'Inter', sans-serif; /* O tu fuente preferida */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* Efecto para la "W" final */
+.logo span {
+    color: var(--accent);
+    font-size: 2.2rem; /* La W más grande */
+    line-height: 1;
+    text-shadow: 0 0 15px rgba(255, 51, 102, 0.6); /* Resplandor neón */
+}
+
+/* Pequeño punto decorativo (opcional) */
+.logo::after {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    margin-left: 5px;
+    margin-top: 10px;
+}
