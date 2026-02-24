@@ -303,3 +303,17 @@ body {
     .header__menu ul li { margin-right: 10px; }
     .header__menu ul li a { font-size: 13px; }
 }
+/* src/style.css */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(34, 211, 238, 0.2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #22d3ee;
+}
