@@ -1,47 +1,47 @@
-import Link from "next/link";
-import { PlayCircle } from "lucide-react";
+import React from 'react';
+import { AnimeData } from '../types';
 
-interface AnimeProps {
-  id: string;
-  title: string;
-  image: string;
-  type: string;
-  episode?: string;
+interface AnimeCardProps {
+  data: AnimeData;
 }
 
-export default function AnimeCard({ anime }: { anime: AnimeProps }) {
+export const AnimeCard: React.FC<AnimeCardProps> = ({ data }) => {
   return (
-    <Link 
-      href={`/anime/${anime.id}`} 
-      className="group relative block w-full aspect-[3/4] rounded-2xl overflow-hidden glass-panel hover:border-accent/50 hover:shadow-neon transition-all duration-300 transform hover:-translate-y-2"
-    >
-      {/* Etiqueta de tipo/episodio */}
-      <div className="absolute top-3 left-3 z-20 bg-accent/90 text-white text-xs font-black px-3 py-1 rounded-full backdrop-blur-md shadow-lg">
-        {anime.episode ? `Episodio ${anime.episode}` : anime.type}
-      </div>
-
-      {/* Imagen de fondo (usamos la etiqueta img normal para links externos) */}
-      <img
-        src={anime.image}
-        alt={anime.title}
-        className="object-cover w-full h-full opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500"
-        loading="lazy"
-      />
+    <div className="group relative overflow-hidden rounded-2xl bg-[#1a1a1a]/60 backdrop-blur-xl border border-white/10 shadow-lg hover:shadow-cyan-500/30 hover:border-cyan-500/50 transition-all duration-300 cursor-pointer">
       
-      {/* Overlay oscuro difuminado en la parte inferior para que resalte el texto */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent z-10" />
-
-      {/* Botón de play central (oculto hasta hacer hover) */}
-      <div className="absolute inset-0 flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <PlayCircle size={64} className="text-white drop-shadow-[0_0_15px_rgba(229,54,55,0.8)]" strokeWidth={1.5} />
+      {/* Contenedor de la Imagen */}
+      <div className="relative aspect-[3/4] overflow-hidden">
+        <img 
+          src={data.image} 
+          alt={data.title} 
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+        />
+        
+        {/* Degradado oscuro en la parte inferior para que el texto sea legible */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
+        
+        {/* Etiqueta del tipo (Anime, Película, OVA) con toque Cyberpunk */}
+        <div className="absolute top-3 right-3 px-2 py-1 bg-black/50 backdrop-blur-md rounded-md text-[10px] font-bold tracking-widest text-cyan-400 border border-cyan-500/30 uppercase shadow-[0_0_10px_rgba(34,211,238,0.2)]">
+          {data.type || 'Anime'}
+        </div>
       </div>
 
-      {/* Título del Anime */}
-      <div className="absolute bottom-0 w-full p-4 z-20">
-        <h3 className="text-white font-bold text-[15px] leading-tight line-clamp-2 group-hover:text-accent transition-colors">
-          {anime.title}
+      {/* Contenido (Título y botón) */}
+      <div className="absolute bottom-0 w-full p-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+        <h3 className="text-white font-semibold text-sm md:text-base line-clamp-2 leading-tight drop-shadow-md">
+          {data.title}
         </h3>
+        
+        {/* Elemento que aparece al hacer hover */}
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 mt-3 flex items-center gap-2">
+          <span className="text-xs text-gray-300 uppercase tracking-wider font-semibold">Ver ahora</span>
+          <svg className="w-4 h-4 text-cyan-500 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path>
+          </svg>
+        </div>
       </div>
-    </Link>
+      
+    </div>
   );
-}
+};
